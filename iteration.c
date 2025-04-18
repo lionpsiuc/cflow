@@ -21,3 +21,14 @@ void set_initial_conditions(const int n, const int m, float* const matrix) {
 
   return;
 }
+
+void heat_propagation(const int m, float* const restrict new,
+                      const float* const restrict old) {
+  for (int j = 1; j < width;
+       j++) { // Start at j = 1, since the first column is fixed
+    new[j] = (1.60f * old[j - 2] + 1.55f * old[j - 1] + old[j] +
+              0.60f * old[j + 1] + 0.25f * old[j + 2]) /
+             5.0f; // Formula as per the assignment instructions
+  }
+  return;
+}
