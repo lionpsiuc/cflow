@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 void print_help() {
   printf("Usage: ");
@@ -12,7 +13,7 @@ void print_help() {
   printf("-h\n");
 }
 
-void read(const char flag, const void* const variable, const char format[]) {
+void read(const char flag, void* const variable, const char format[]) {
   if (sscanf(optarg, format, variable) != 1) {
     fprintf(stderr, "Couldn't read -%c argument\n", flag);
     print_help();
@@ -29,10 +30,10 @@ typedef struct {
 
 arguments defaults(void) {
   arguments args;
-  arguments.n          = 32;
-  arguments.m          = 32;
-  arguments.iterations = 10;
-  arguments.average    = false;
+  args.n          = 32;
+  args.m          = 32;
+  args.iterations = 10;
+  args.average    = false;
   return args;
 }
 
@@ -41,7 +42,7 @@ arguments parse(const int argc, char* const argv[]) {
 
   // Parse arguments
   const char list[] = "n:m:p:ah";
-  char       flag;
+  int        flag;
   while ((flag = getopt(argc, argv, list)) != -1) {
     switch (flag) {
       case 'n': read(flag, &(args.n), "%d"); break;
@@ -64,8 +65,12 @@ arguments parse(const int argc, char* const argv[]) {
     fprintf(stderr, "Matrix must have positive height\n");
     exit(EXIT_FAILURE);
   }
+  if (args.m <= 0) {
+    fprintf(stderr, "Matrix must have positive width\n");
+    exit(EXIT_FAILURE);
+  }
   if (args.iterations < 0) {
-    fprintf(stderr, "Number of iterations must be positive\n");
+    fprintf(stderr, "Number of iterations must be non-negative\n");
     exit(EXIT_FAILURE);
   }
 
