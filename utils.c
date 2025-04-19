@@ -91,3 +91,12 @@ double get_duration(double* const time) {
 
   return diff;
 }
+
+void print_matrix(const int n, const int m, const float* const matrix) {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < m; j++) {
+      printf("%8.6f   ", matrix[i * m + j]);
+    }
+    printf("\n");
+  }
+}
