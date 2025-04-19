@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "iteration.h"
+
 // void set_initial_conditions(const int n, const int m, float* const matrix) {
 
 //   // Add two extra columns in order to simplify the 'wrapping around' problem
