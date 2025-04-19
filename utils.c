@@ -1,8 +1,11 @@
+#include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
+
+#include "utils.h"
 
 void print_help() {
   printf("Usage: ");
@@ -14,20 +17,14 @@ void print_help() {
   printf("-h\n");
 }
 
-void read(const char flag, void* const variable, const char format[]) {
+void parse_argument(const char flag, void* const variable,
+                    const char format[]) {
   if (sscanf(optarg, format, variable) != 1) {
     fprintf(stderr, "Couldn't read -%c argument\n", flag);
     print_help();
     exit(EXIT_FAILURE);
   }
 }
-
-typedef struct {
-  int  n;
-  int  m;
-  int  iterations;
-  bool average;
-} arguments;
 
 arguments defaults(void) {
   arguments args;
@@ -46,9 +43,9 @@ arguments parse(const int argc, char* const argv[]) {
   int        flag;
   while ((flag = getopt(argc, argv, list)) != -1) {
     switch (flag) {
-      case 'n': read(flag, &(args.n), "%d"); break;
-      case 'm': read(flag, &(args.m), "%d"); break;
-      case 'p': read(flag, &(args.iterations), "%d"); break;
+      case 'n': parse_argument(flag, &(args.n), "%d"); break;
+      case 'm': parse_argument(flag, &(args.m), "%d"); break;
+      case 'p': parse_argument(flag, &(args.iterations), "%d"); break;
       case 'a': args.average = true; break;
       case 'h':
         print_help();
