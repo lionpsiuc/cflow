@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -march=native -O -std=c2x -Wall -Wextra
+CFLAGS = -funroll-loops -march=native -O3 -std=c2x -Wall -Wextra
 
 TARGET = assignment2
 
