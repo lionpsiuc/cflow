@@ -62,7 +62,7 @@ void iterations(const int iterations, const int n, const int m, float* matrix) {
 
   // Perform iterations
   for (int iter = 0; iter < iterations; iter++) {
-    for (int i = 0; i < height; i++) {
+    for (int i = 0; i < n; i++) {
       for (int j = 1; j < m;
            j++) { // Start at j = 1, since the first column is fixed
 
