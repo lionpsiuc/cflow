@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 void print_help() {
@@ -75,4 +76,18 @@ arguments parse(const int argc, char* const argv[]) {
   }
 
   return args;
+}
+
+double get_current_time(void) {
+  struct timeval current_time;
+  gettimeofday(&current_time, NULL);
+
+  return (double) (current_time.tv_sec + current_time.tv_usec * 1e-6);
+}
+
+double get_duration(double* const time) {
+  const double diff = get_current_time() - *time;
+  *time             = get_current_time();
+
+  return diff;
 }
