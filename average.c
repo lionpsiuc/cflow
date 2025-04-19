@@ -1,5 +1,6 @@
-int average_rows(const int n, const int m, const float* const matrix,
-                 float* const averages) {
+// Updated for optimised matrices
+int average_rows(const int n, const int m, const int increment,
+                 const float* const dst, float* const averages) {
 
   // Initialise averages to zero
   for (int i = 0; i < n; i++) {
@@ -9,7 +10,7 @@ int average_rows(const int n, const int m, const float* const matrix,
   // Calculate sum for each row
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      averages[i] += matrix[i * m + j];
+      averages[i] += dst[i * increment + j];
     }
   }
 

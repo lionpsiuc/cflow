@@ -2,20 +2,22 @@
 #define UTILS_H
 
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 typedef struct {
-  int  n;
-  int  m;
-  int  iterations;
-  bool average;
+  int  n;       // Number of rows (i.e., height)
+  int  m;       // Number of columns (i.e., width)
+  int  iters;   // Number of iterations
+  bool average; // Whether to compute the average (i.e., the temperature)
 } arguments;
 
-void print_help(void);
-void parse_argument(const char flag, void* const variable, const char format[]);
-arguments defaults(void);
 arguments parse(const int argc, char* const argv[]);
 double    get_current_time(void);
 double    get_duration(double* const time);
-void      print_matrix(const int n, const int m, const float* const matrix);
+void      print_matrix(const int n, const int m, const int increment,
+                       float* const dst);
 
 #endif // UTILS_H

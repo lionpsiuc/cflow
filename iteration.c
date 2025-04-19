@@ -4,102 +4,92 @@
 
 #include "iteration.h"
 
-// void set_initial_conditions(const int n, const int m, float* const matrix) {
+// Initialise the grid
+static void init(const int n, const int m, float* const grid) {
+  const int increment = m + 2; // We need to skip the last two columns since
+                               // they are copies of the first and second column
 
-//   // Add two extra columns in order to simplify the 'wrapping around' problem
-//   const int row_length = n + 2;
+  // Loop over rows
+  for (int i = 0; i < n; i++) {
+    float col0 =
+        0.98f * (float) ((i + 1) * (i + 1)) /
+        (float) (n * n); // Set it as a variable to make initialisation easier
+    grid[i * increment + 0] = col0; // We have a '+ 0' here for consistency
 
-//   // Loop over rows and set the initial values
-//   for (int i = 0; i < n; i++) {
-//     float col0 = 0.98f * (float) ((i + 1) * (i + 1)) / (float) (n * n);
-//     matrix[i * row_length + 0] = col0; // We add + 0 for consistency
+    // Interior points
+    for (int j = 1; j < m; j++) {
+      grid[i * increment + j] =
+          col0 * ((float) (m - j) * (m - j) / (float) (m * m));
+    }
 
-//     // Set interior points
-//     for (int j = 1; j < m; j++) {
-//       matrix[i * row_length + j] =
-//           col0 * ((float) (m - j) * (m - j)) / (float) (m * m);
-//     }
-
-//     // We set the extra columns here
-//     matrix[i * row_length + m + 0] = matrix[i * row_length + 0];
-//     matrix[i * row_length + m + 1] = matrix[i * row_length + 1];
-//   }
-
-//   return;
-// }
-
-// void heat_propagation(const int m, float* const restrict new,
-//                       const float* const restrict old) {
-//   for (int j = 1; j < width;
-//        j++) { // Start at j = 1, since the first column is fixed
-//     new[j] = ((1.60f * old[j - 2]) + (1.55f * old[j - 1]) + old[j] +
-//               (0.60f * old[j + 1]) + (0.25f * old[j + 2])) /
-//              5.0f; // Formula as per the assignment instructions
-//   }
-//   return;
-// }
-
-void iterations(const int iterations, const int n, const int m, float* matrix) {
-
-  // Allocate a temporary matrix for calculations
-  float* temp_matrix = (float*) malloc(n * m * sizeof(float));
-  if (temp_matrix == NULL) {
-    fprintf(stderr, "Failed to allocate memory for the temporary matrix\n");
-    exit(EXIT_FAILURE);
+    // Extra columns
+    grid[i * increment + m + 0] = grid[i * increment + 0];
+    grid[i * increment + m + 1] = grid[i * increment + 1];
   }
+
+  return;
+}
+
+// Perform a single iteration on a row
+static void iteration(const int m, float* const restrict dst,
+                      const float* const restrict src) {
+
+  // Here, we deal with the column at j = 1, since it also wraps around
+  {
+    int j = 1;
+
+    // Left neighbours
+    float old_l2 = src[m - 1];
+    float old_l1 = src[0];
+
+    // Right neighbours
+    float old_r1 = src[j + 1];
+    float old_r2 = src[j + 2];
+
+    dst[j] = ((1.60f * old_l2) + (1.55f * old_l1) + src[j] + (0.60f * old_r1) +
+              (0.25f * old_r2)) /
+             5.0f;
+  }
+
+  // Other updates
+  for (int j = 2; j < m; j++) {
+    dst[j] = ((1.60f * src[j - 2]) + (1.55f * src[j - 1]) + src[j] +
+              (0.60f * src[j + 1]) + (0.25f * src[j + 2])) /
+             5.0f;
+  }
+
+  // Refresh our extra columns for further iterations
+  dst[0]     = src[0];
+  dst[m]     = dst[0];
+  dst[m + 1] = dst[1];
+}
+
+// Perform the specified number of iterations
+static void iterations(const int iters, const int m, float* restrict dst,
+                       float* restrict src) {
+  if (iters % 2 != 0) {
+    iteration(m, dst, src);
+  }
+  for (int iter = 0; iter < iters / 2; iter++) {
+    iteration(m, src, dst);
+    iteration(m, dst, src);
+  }
+  return;
+}
+
+// Perform the simulation on our matrix
+void heat_propagation(const int iters, const int n, const int m,
+                      float* restrict dst, float* restrict src) {
+  const int increment = m + 2;
 
   // Set initial conditions
+  init(n, m, dst);
+  init(n, m, src);
+
   for (int i = 0; i < n; i++) {
-    float col0        = 0.98f * (float) ((i + 1) * (i + 1)) / (float) (n * n);
-    matrix[i * m + 0] = col0; // We add + 0 for consistency
-
-    // Set initial values for other columns
-    for (int j = 1; j < m; j++) {
-      matrix[i * m + j] = col0 * ((float) (m - j) * (m - j)) / (float) (m * m);
-    }
+    float* const row_dst = dst + i * increment;
+    float* const row_src = src + i * increment;
+    iterations(iters, m, row_dst, row_src); // Perform the iterations
   }
-
-  // Copy initial values to the temporary matrix
-  memcpy(temp_matrix, matrix, n * m * sizeof(float));
-
-  // Perform iterations
-  for (int iter = 0; iter < iterations; iter++) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 1; j < m;
-           j++) { // Start at j = 1, since the first column is fixed
-
-        // Handle wrapping for points near the left edge
-        float old_minus2 =
-            (j >= 2) ? matrix[i * m + (j - 2)] : matrix[i * m + (m + j - 2)];
-        float old_minus1 =
-            (j >= 1) ? matrix[i * m + (j - 1)] : matrix[i * m + (m + j - 1)];
-
-        // Current value
-        float old = matrix[i * m + j];
-
-        // Handle wrapping for points near the right edge
-        float old_plus1 = (j < m - 1) ? matrix[i * m + (j + 1)]
-                                      : matrix[i * m + ((j + 1) % m)];
-        float old_plus2 = (j < m - 2) ? matrix[i * m + (j + 2)]
-                                      : matrix[i * m + ((j + 2) % m)];
-
-        // Heat propagation
-        temp_matrix[i * m + j] =
-            ((1.60f * old_minus2) + (1.55f * old_minus1) + old +
-             (0.60f * old_plus1) + (0.25f * old_plus2)) /
-            5.0f;
-      }
-    }
-
-    // Copy updated values back to the original matrix, except for the first
-    // column, since it is fixed
-    for (int i = 0; i < n; i++) {
-      for (int j = 1; j < m; j++) {
-        matrix[i * m + j] = temp_matrix[i * m + j];
-      }
-    }
-  }
-
-  // Free temporary matrix
-  free(temp_matrix);
+  return;
 }

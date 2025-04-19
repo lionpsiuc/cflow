@@ -1,6 +1,7 @@
 #ifndef ITERATION_H
 #define ITERATION_H
 
-void iterations(const int iterations, const int n, const int m, float* matrix);
+void heat_propagation(const int iters, const int n, const int m,
+                      float* restrict dst, float* restrict src);
 
 #endif // ITERATION_H

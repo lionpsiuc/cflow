@@ -6,53 +6,55 @@
 #include "utils.h"
 
 int main(int argc, char* argv[]) {
-  arguments args = parse(argc, argv); // Parse command-line arguments
-  printf("\nMatrix:\t\t%d x %d (%d iterations)\n", args.n, args.m,
-         args.iterations);
+  arguments  args      = parse(argc, argv); // Parse command-line arguments
+  const int  n         = args.n;
+  const int  m         = args.m;
+  const int  increment = m + 2;
+  const int  iters     = args.iters;
+  const bool average   = args.average;
+
+  // Print parameters used
+  printf("\nMatrix:\t\t%d x %d (%d iterations)\n", n, n, iters);
   printf("Precision:\t32-bit float\n\n");
 
-  // Allocated memory for the matrix
-  float* matrix = (float*) calloc(args.n * args.m, sizeof(float));
-  if (matrix == NULL) {
-    fprintf(stderr, "Failed to allocate memory for matrix\n");
-    return EXIT_FAILURE;
+  // Allocate memory on the host
+  float* const averages = calloc(n, sizeof(float));
+  float* const dst      = calloc(n * increment, sizeof(float));
+  float* const src      = calloc(n * increment, sizeof(float));
+  if (averages == NULL || dst == NULL || src == NULL) {
+    fprintf(stderr, "Failed to allocate memory on host\n");
+    exit(EXIT_FAILURE);
   }
 
-  // Timing
+  // Timing on the CPU
   double start_time   = get_current_time();
   double cpu_times[2] = {0}; // Array to store timing results
   int    timing_index = 0;
 
-  // Iterations to calculate heat propagation
-  printf("Performing %d iterations...\n", args.iterations);
-  iterations(args.iterations, args.n, args.m, matrix);
+  // Iterations on the CPU
+  printf("Performing %d iterations...\n", iters);
+  heat_propagation(iters, n, m, dst, src);
   cpu_times[timing_index++] = get_duration(&start_time);
-
   printf("Iterations completed in %.6f seconds\n\n", cpu_times[0]);
 
   // Averages, if requested
-  if (args.average) {
+  if (average) {
     printf("Calculating row averages...\n");
-
-    // Allocate memory for averages
-    float* averages = (float*) calloc(args.n, sizeof(float));
-    if (averages == NULL) {
-      fprintf(stderr, "Failed to allocate memory for averages\n");
-      free(matrix);
-      return EXIT_FAILURE;
-    }
 
     // Calculate averages
     start_time = get_current_time();
-    average_rows(args.n, args.m, matrix, averages);
+    average_rows(m, m, increment, dst, averages);
     cpu_times[timing_index++] = get_duration(&start_time);
-
     printf("Row averages calculated in %.6f seconds\n\n", cpu_times[1]);
-    free(averages);
   }
 
-  // Free the matrix
-  free(matrix);
+  // For debugging purposes
+  // print_matrix(n, m, increment, dst);
+
+  // Free memory
+  free(averages);
+  free(dst);
+  free(src);
 
   return EXIT_SUCCESS;
 }
