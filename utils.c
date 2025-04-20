@@ -17,6 +17,8 @@ static void help() {
   printf("-m <columns> ");
   printf("-p <iters> ");
   printf("-a ");
+  printf("-c ");
+  printf("-t ");
   printf("-h\n");
 }
 
@@ -37,6 +39,8 @@ static arguments defaults(void) {
   args.m       = 32;
   args.iters   = 10;
   args.average = false;
+  args.cpu     = false;
+  args.timing  = false;
   return args;
 }
 
@@ -45,7 +49,7 @@ arguments parse(const int argc, char* const argv[]) {
   arguments args = defaults(); // Start with the default arguments
 
   // Parse arguments
-  const char list[] = "n:m:p:ah";
+  const char list[] = "n:m:p:acth";
   int        flag;
   while ((flag = getopt(argc, argv, list)) != -1) {
     switch (flag) {
@@ -53,6 +57,8 @@ arguments parse(const int argc, char* const argv[]) {
       case 'm': parse_argument(flag, &(args.m), "%d"); break;
       case 'p': parse_argument(flag, &(args.iters), "%d"); break;
       case 'a': args.average = true; break;
+      case 'c': args.cpu = true; break;
+      case 't': args.timing = true; break;
       case 'h':
         help();
         exit(EXIT_SUCCESS);
