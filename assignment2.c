@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "average.h"
+#include "iteration-gpu.h"
 #include "iteration.h"
 #include "utils.h"
 
@@ -20,6 +21,7 @@ int main(int argc, char* argv[]) {
   // Allocate memory on the host
   float* const averages = calloc(n, sizeof(float));
   float* const dst      = calloc(n * increment, sizeof(float));
+  float* const dst_gpu  = calloc(n * increment, sizeof(float));
   float* const src      = calloc(n * increment, sizeof(float));
   if (averages == NULL || dst == NULL || src == NULL) {
     fprintf(stderr, "Failed to allocate memory on host\n");
@@ -48,12 +50,20 @@ int main(int argc, char* argv[]) {
     printf("Row averages calculated in %.6f seconds\n\n", cpu_times[1]);
   }
 
+  // GPU test
+  float gpu_timing[1] = {0};
+  init_gpu_wrapper(dst_gpu, n, m, gpu_timing);
+  printf("GPU init completed in %.6f seconds\n\n", gpu_timing[0]);
+  print_matrix(n, m, increment, dst_gpu);
+  exit(EXIT_SUCCESS);
+
   // For debugging purposes
   // print_matrix(n, m, increment, dst);
 
   // Free memory
   free(averages);
   free(dst);
+  free(dst_gpu);
   free(src);
 
   return EXIT_SUCCESS;
