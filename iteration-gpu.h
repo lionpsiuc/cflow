@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-void init_gpu_wrapper(float* grid, int n, int m, float* timing);
-
 #ifdef __cplusplus
 }
 #endif

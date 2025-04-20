@@ -50,12 +50,6 @@ int main(int argc, char* argv[]) {
     printf("Row averages calculated in %.6f seconds\n\n", cpu_times[1]);
   }
 
-  // GPU test
-  float gpu_timing[3] = {0};
-  init_gpu_wrapper(dst_gpu, n, m, gpu_timing);
-  printf("GPU init completed in %.6f seconds\n\n", gpu_timing[0]);
-  print_matrix(n, m, increment, dst_gpu);
-
   // Free memory
   free(averages);
   free(dst);
