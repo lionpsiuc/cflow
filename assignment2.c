@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   float* const dst      = calloc(n * increment, sizeof(float));
   float* const dst_gpu  = calloc(n * increment, sizeof(float));
   float* const src      = calloc(n * increment, sizeof(float));
-  if (averages == NULL || dst == NULL || src == NULL) {
+  if (averages == NULL || dst == NULL || dst_gpu == NULL || src == NULL) {
     fprintf(stderr, "Failed to allocate memory on host\n");
     exit(EXIT_FAILURE);
   }
@@ -55,10 +55,6 @@ int main(int argc, char* argv[]) {
   init_gpu_wrapper(dst_gpu, n, m, gpu_timing);
   printf("GPU init completed in %.6f seconds\n\n", gpu_timing[0]);
   print_matrix(n, m, increment, dst_gpu);
-  exit(EXIT_SUCCESS);
-
-  // For debugging purposes
-  // print_matrix(n, m, increment, dst);
 
   // Free memory
   free(averages);
