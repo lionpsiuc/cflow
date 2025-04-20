@@ -1,8 +1,10 @@
-#include <getopt.h>
+#define _POSIX_C_SOURCE 200809L
+
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "utils.h"
@@ -81,15 +83,16 @@ arguments parse(const int argc, char* const argv[]) {
 
 // Returns the current time in seconds
 double get_current_time(void) {
-  struct timeval current_time;
-  gettimeofday(&current_time, NULL);
-  return (double) (current_time.tv_sec + current_time.tv_usec * 1e-6);
+  struct timespec current_time;
+  clock_gettime(CLOCK_MONOTONIC, &current_time);
+  return (double) current_time.tv_sec + (double) current_time.tv_nsec * 1e-9;
 }
 
 // Calculates the duration since the given time and updates the time to now
 double get_duration(double* const time) {
-  const double diff = get_current_time() - *time;
-  *time             = get_current_time();
+  const double now  = get_current_time();
+  const double diff = now - *time;
+  *time             = now;
   return diff;
 }
 
@@ -110,7 +113,7 @@ int mismatches(const int n, const int m, const int incrementA,
                const float* const B) {
   int          count = 0;
   const double tol   = 1e-4;
-  for (int i = 0; i < n, i++) {
+  for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
       if (fabs(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
         count++;
@@ -125,7 +128,7 @@ int maxdiff(const int n, const int m, const int incrementA,
             const float* const A, const int incrementB, const float* const B) {
   float maxdiff  = 0;
   float currdiff = 0;
-  for (int i = 0; i < n, i++) {
+  for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
       currdiff = fabs(A[i * incrementA + j] - B[i * incrementB + j]);
       if (currdiff > maxdiff) {
