@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
   }
 
   // GPU test
-  float gpu_timing[1] = {0};
+  float gpu_timing[3] = {0};
   init_gpu_wrapper(dst_gpu, n, m, gpu_timing);
   printf("GPU init completed in %.6f seconds\n\n", gpu_timing[0]);
   print_matrix(n, m, increment, dst_gpu);
