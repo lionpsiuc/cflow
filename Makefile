@@ -1,30 +1,31 @@
-CC = gcc
-CFLAGS = -funroll-loops -march=native -O3 -std=c2x -Wall -Wextra
+CC   = gcc
+NVCC = nvcc
+
+CFLAGS  = -funroll-loops -march=native -O3 -std=c2x -Wall -Wextra
+NVFLAGS =
 
 TARGET = assignment2
 
-SRCS = assignment2.c average.c iteration.c utils.c
-HDRS = average.h iteration.h utils.h
-OBJS = $(SRCS:.c=.o)
+CSRCS  = assignment2.c average.c iteration.c utils.c
+CUSRCS = iteration-gpu.cu
+HDRS   = average.h iteration.h iteration-gpu.h utils.h
+
+COBJS  = $(SRCS:.c=.o)
+CUOBJS = $(CUSRCS:.cu=.o)
+OBJS   = $(COBJS) $(CUOBJS)
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@ -lm
+	$(NVCC) $(NVFLAGS) $< -o $@ -lm
 
-assignment2.o: assignment2.c $(HDRS)
+%.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-average.o: average.c average.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-iteration.o: iteration.c iteration.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-utils.o: utils.c utils.h
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.cu
+	$(NVCC) $(NVFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGET) $(COBJS) $(CUOBJS)
 
 .PHONY: all clean
