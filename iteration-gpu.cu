@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stlib.h>
 
 #define TIME_INIT()                                                            \
   cudaEvent_t start;                                                           \
@@ -25,8 +24,8 @@
   cudaEventDestroy(end);
 
 // Initialise the grid on the GPU
-__global__ void init(const int n, const int m, const int increment,
-                     float* const grid) {
+__global__ void init_gpu(const int n, const int m, const int increment,
+                         float* const grid) {
   const int i = blockIdx.y * blockDim.y + threadIdx.y;
   const int j = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -48,4 +47,17 @@ __global__ void init(const int n, const int m, const int increment,
       }
     }
   }
+}
+
+extern "C" void init_gpu_wrapper(float* grid, int n, int m, float* timing) {
+  const int increment = m + 2;
+  dim3      threadsPerBlock(16, 16);
+  dim3      numBlocks((m + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                      (n + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  TIME_INIT();
+  TIME_START();
+  init_gpu<<<numBlocks, threadsPerBlock>>>(n, m, increment, grid);
+  cudaDeviceSynchronize();
+  TIME_END();
+  TIME_FINISH();
 }
