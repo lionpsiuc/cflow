@@ -49,15 +49,35 @@ __global__ void init_gpu(const int n, const int m, const int increment,
   }
 }
 
-extern "C" void init_gpu_wrapper(float* grid, int n, int m, float* timing) {
+extern "C" void init_gpu_wrapper(float* host_grid, int n, int m,
+                                 float* timing) {
   const int increment = m + 2;
   dim3      threadsPerBlock(16, 16);
   dim3      numBlocks((m + threadsPerBlock.x - 1) / threadsPerBlock.x,
                       (n + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  float*    device_grid;
+  size_t    grid_size = n * increment * sizeof(float);
   TIME_INIT();
+
+  // Allocate memory on the GPU
   TIME_START();
-  init_gpu<<<numBlocks, threadsPerBlock>>>(n, m, increment, grid);
+  cudaMalloc((void**) &device_grid, grid_size);
+  cudaMemset(device_grid, 0, grid_size);
+  TIME_END();
+
+  // Run the kernel
+  TIME_START();
+  init_gpu<<<numBlocks, threadsPerBlock>>>(n, m, increment, device_grid);
   cudaDeviceSynchronize();
   TIME_END();
+
+  // Copy the result back to the host
+  TIME_START();
+  cudaMemcpy(host_grid, device_grid, grid_size, cudaMemcpyDeviceToHost);
+  TIME_END();
+
+  // Free GPU memory
+  cudaFree(device_grid);
+
   TIME_FINISH();
 }
