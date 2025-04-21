@@ -9,4 +9,6 @@ extern "C" {
 }
 #endif
 
+extern void test_wrapper(float* host_grid, int n, int m, float* timing);
+
 #endif
