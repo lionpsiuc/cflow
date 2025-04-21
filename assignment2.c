@@ -50,6 +50,21 @@ int main(int argc, char* argv[]) {
     printf("Row averages calculated in %.6f seconds\n\n", cpu_times[1]);
   }
 
+  print_matrix(n, m, increment, dst);
+
+  // GPU test
+  printf("\nPerforming GPU initialisation and one iteration...\n");
+  float gpu_timing[4] = {0};
+  test_wrapper(dst_gpu, n, m, gpu_timing);
+  printf("GPU operations completed in %.6f seconds\n",
+         gpu_timing[0] + gpu_timing[1] + gpu_timing[2] + gpu_timing[3]);
+  printf("Memory allocation on the GPU took %.6f seconds\n", gpu_timing[0]);
+  printf("Initialisation on the GPU took %.6f seconds\n", gpu_timing[1]);
+  printf("The iteration on the GPU took %.6f seconds\n", gpu_timing[2]);
+  printf("Memory transfer back to the CPU took %.6f seconds\n\n",
+         gpu_timing[3]);
+  print_matrix(n, m, increment, dst_gpu);
+
   // Free memory
   free(averages);
   free(dst);
