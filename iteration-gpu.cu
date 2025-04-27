@@ -23,6 +23,9 @@
   cudaEventDestroy(start);                                                     \
   cudaEventDestroy(end);
 
+// Maximum elements to process in each tile (excluding halos)
+#define MAX_TILE_SIZE 4096
+
 __global__ void init_gpu(const int n, const int m, const int increment,
                          float* const grid) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -44,66 +47,99 @@ __global__ void init_gpu(const int n, const int m, const int increment,
   grid[i * increment + m + 1] = grid[i * increment + 1];
 }
 
-__global__ void iteration_gpu_shared(const int n, const int m,
-                                     const int increment, float* const dst,
-                                     const float* const src) {
-  int row      = blockIdx.x; // Each block handles one row
-  int local_id = threadIdx.x;
+__global__ void iteration_gpu_tiled(const int n, const int m,
+                                    const int increment, float* const dst,
+                                    const float* const src, const int tile_size,
+                                    const int tiles_per_row) {
+  // Calculate row and tile indices
+  int row_idx  = blockIdx.x / tiles_per_row;
+  int tile_idx = blockIdx.x % tiles_per_row;
 
-  if (row >= n)
+  // Skip if we're out of bounds
+  if (row_idx >= n)
     return;
 
-  const int row_offset = row * increment;
+  // Calculate row offset in global memory
+  const int row_offset = row_idx * increment;
 
-  // Allocate shared memory for a block of the row plus halo regions
-  extern __shared__ float shared_row[];
+  // Calculate start and end of this tile (in global memory indices)
+  int tile_start =
+      tile_idx * tile_size + 1; // Start from column 1 (col 0 is boundary)
+  int tile_end = min(tile_start + tile_size, m);
 
-  // Each thread loads one or more elements from global to shared memory
-  for (int col = local_id; col < m + 4; col += blockDim.x) {
-    // Map to the correct position in global memory with wraparound
+  // Calculate size of this tile
+  int actual_tile_size = tile_end - tile_start;
+
+  // Shared memory size calculation: actual tile + 4 halo elements
+  extern __shared__ float sh_mem[];
+
+  // Load data into shared memory (including halo regions)
+  // Each thread loads multiple elements
+  for (int i = threadIdx.x; i < actual_tile_size + 4; i += blockDim.x) {
     int global_col;
-    if (col < 2) {
-      // Left halo comes from right edge of row (m-2 and m-1)
-      global_col = m - 2 + col;
-    } else if (col >= m + 2) {
-      // Right halo comes from left edge of row (0 and 1)
-      global_col = col - m;
+
+    // Handle halo regions with wraparound
+    if (i < 2) {
+      // Left halo
+      if (tile_start <= 2) {
+        // Special case: wrapping around to end of row
+        global_col = (tile_start - 2 + i + m - 1) % m;
+        if (global_col == 0)
+          global_col = m;
+      } else {
+        // Regular case: previous columns
+        global_col = tile_start - 2 + i;
+      }
+    } else if (i >= actual_tile_size + 2) {
+      // Right halo
+      if (tile_end >= m - 1) {
+        // Special case: wrapping around to beginning of row
+        global_col = (i - (actual_tile_size + 2) + tile_end) % m;
+        if (global_col == 0)
+          global_col = 0; // Use boundary value
+      } else {
+        // Regular case: next columns
+        global_col = tile_end + (i - (actual_tile_size + 2));
+      }
     } else {
-      // Regular column
-      global_col = col - 2;
+      // Regular tile data
+      global_col = tile_start + (i - 2);
     }
 
-    // Load global memory into shared memory
-    shared_row[col] = src[row_offset + global_col];
+    // Load from global memory
+    sh_mem[i] = src[row_offset + global_col];
   }
 
-  // Synchronize to ensure all data is loaded into shared memory
+  // Ensure all data is loaded
   __syncthreads();
 
-  // Handle column 0 separately as a boundary condition
-  if (local_id == 0) {
+  // Process tile
+  for (int i = threadIdx.x; i < actual_tile_size; i += blockDim.x) {
+    // Skip column 0 (boundary condition)
+    if (tile_start + i == 0)
+      continue;
+
+    // Shared memory indices (i+2 to account for halo)
+    int sh_idx = i + 2;
+
+    // Apply stencil
+    float result =
+        ((1.60f * sh_mem[sh_idx - 2]) + (1.55f * sh_mem[sh_idx - 1]) +
+         sh_mem[sh_idx] + (0.60f * sh_mem[sh_idx + 1]) +
+         (0.25f * sh_mem[sh_idx + 2])) /
+        5.0f;
+
+    // Write result to global memory
+    dst[row_offset + tile_start + i] = result;
+  }
+
+  // Handle boundary condition for column 0
+  if (tile_start <= 1 && threadIdx.x == 0) {
     dst[row_offset] = src[row_offset];
   }
 
-  // Process columns in parallel using shared memory
-  for (int col = local_id + 1; col < m; col += blockDim.x) {
-    // Shared memory indices account for the 2-element halo on each side
-    // Col 1 in global memory is at index 3 in shared memory
-    int shared_idx = col + 2;
-
-    // Apply the stencil using shared memory
-    float result =
-        ((1.60f * shared_row[shared_idx - 2]) +
-         (1.55f * shared_row[shared_idx - 1]) + shared_row[shared_idx] +
-         (0.60f * shared_row[shared_idx + 1]) +
-         (0.25f * shared_row[shared_idx + 2])) /
-        5.0f;
-
-    dst[row_offset + col] = result;
-  }
-
   // Update wraparound columns
-  if (local_id == 0) {
+  if (tile_end >= m && threadIdx.x == 0) {
     dst[row_offset + m]     = dst[row_offset + 0];
     dst[row_offset + m + 1] = dst[row_offset + 1];
   }
@@ -117,12 +153,31 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
   int threadsPerBlock = 256;
   int blocksForInit   = (n + threadsPerBlock - 1) / threadsPerBlock;
 
-  // Calculate shared memory size - need space for m elements plus halo regions
-  int sharedMemSize = (m + 4) * sizeof(float);
+  // Calculate tile size and number of tiles per row
+  // Subtract 4 for the halo regions (2 on each side)
+  const int tile_size     = MAX_TILE_SIZE;
+  const int tiles_per_row = (m + tile_size - 1) / tile_size;
 
-  // Use 1D grid for shared memory kernel - one block per row
-  dim3 blockSize(256);
-  dim3 gridSize(n);
+  // Calculate actual shared memory needed per block
+  // Add 4 for halo regions (2 on each side)
+  int max_elements_in_tile = tile_size + 4;
+  for (int i = 0; i < tiles_per_row - 1; i++) {
+    max_elements_in_tile =
+        max(max_elements_in_tile, min(tile_size, m - i * tile_size) + 4);
+  }
+  int sharedMemSize = max_elements_in_tile * sizeof(float);
+
+  printf("Tile configuration:\t\t%d tiles per row, max %d elements per tile\n",
+         tiles_per_row, max_elements_in_tile);
+  printf("Shared memory per block:\t%d bytes (%.1f KB)\n", sharedMemSize,
+         sharedMemSize / 1024.0f);
+
+  // Use 1D grid - one block per tile per row
+  dim3 blockSize(threadsPerBlock);
+  dim3 gridSize(n * tiles_per_row);
+
+  printf("Grid size:\t\t\t%d blocks (%d threads per block)\n",
+         n * tiles_per_row, threadsPerBlock);
 
   // Allocate memory on GPU
   float* device_src = NULL;
@@ -132,7 +187,7 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
   cudaError_t error;
   TIME_INIT();
 
-  // Allocate and initialise device memory
+  // Allocate and initialize device memory
   TIME_START();
   error = cudaMalloc((void**) &device_src, grid_size);
   if (error != cudaSuccess) {
@@ -149,7 +204,7 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
     return;
   }
 
-  // Initialise with zeros to start
+  // Initialize with zeros to start
   cudaMemset(device_src, 0, grid_size);
   cudaMemset(device_dst, 0, grid_size);
   TIME_END();
@@ -175,12 +230,10 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
   // Perform iterations
   TIME_START();
 
-  printf("Starting iterations on GPU...\n");
-
   // Handle special case for odd iteration count
   if (iters % 2 != 0) {
-    iteration_gpu_shared<<<gridSize, blockSize, sharedMemSize>>>(
-        n, m, increment, device_dst, device_src);
+    iteration_gpu_tiled<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, device_dst, device_src, tile_size, tiles_per_row);
     error = cudaGetLastError();
     if (error != cudaSuccess) {
       fprintf(stderr, "Error launching iteration kernel: %s\n",
@@ -200,14 +253,10 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
 
   // Run paired iterations
   for (int iter = 0; iter < iters / 2; iter++) {
-    // Print progress for large iterations
-    if (iters >= 100 && iter % 100 == 0) {
-      printf("GPU completed %d iterations\n", iter * 2);
-    }
 
     // First iteration in the pair
-    iteration_gpu_shared<<<gridSize, blockSize, sharedMemSize>>>(
-        n, m, increment, device_dst, device_src);
+    iteration_gpu_tiled<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, device_dst, device_src, tile_size, tiles_per_row);
     error = cudaGetLastError();
     if (error != cudaSuccess) {
       fprintf(stderr, "Error in iteration %d (first): %s\n", iter,
@@ -218,8 +267,8 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
     cudaDeviceSynchronize();
 
     // Second iteration in the pair
-    iteration_gpu_shared<<<gridSize, blockSize, sharedMemSize>>>(
-        n, m, increment, device_src, device_dst);
+    iteration_gpu_tiled<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, device_src, device_dst, tile_size, tiles_per_row);
     error = cudaGetLastError();
     if (error != cudaSuccess) {
       fprintf(stderr, "Error in iteration %d (second): %s\n", iter,
@@ -230,7 +279,6 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
     cudaDeviceSynchronize();
   }
 
-  printf("GPU iterations complete\n");
   TIME_END();
 
   // Copy results back to the host
