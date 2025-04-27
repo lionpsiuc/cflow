@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     // Compare matrix results
     int matrix_mismatches =
         mismatches(n, m, increment, dst, increment, dst_gpu);
-    int matrix_maxdiff = maxdiff(n, m, increment, dst, increment, dst_gpu);
+    float matrix_maxdiff = maxdiff(n, m, increment, dst, increment, dst_gpu);
 
     printf("Matrix comparison:\n");
     printf("\tMismatches: %d\n", matrix_mismatches);

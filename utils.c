@@ -117,11 +117,11 @@ void print_matrix(const int n, const int m, const int increment,
 int mismatches(const int n, const int m, const int incrementA,
                const float* const A, const int incrementB,
                const float* const B) {
-  int          count = 0;
-  const double tol   = 1e-4;
+  int         count = 0;
+  const float tol   = 1e-4f;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      if (fabs(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
+      if (fabsf(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
         count++;
       }
     }
@@ -137,7 +137,7 @@ float maxdiff(const int n, const int m, const int incrementA,
   float currdiff = 0;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      currdiff = fabs(A[i * incrementA + j] - B[i * incrementB + j]);
+      currdiff = fabsf(A[i * incrementA + j] - B[i * incrementB + j]);
       if (currdiff > maxdiff) {
         maxdiff = currdiff;
       }
