@@ -18,7 +18,7 @@ void      print_matrix(const int n, const int m, const int increment,
 int       mismatches(const int n, const int m, const int incrementA,
                      const float* const A, const int incrementB,
                      const float* const B);
-int       maxdiff(const int n, const int m, const int incrementA,
+float     maxdiff(const int n, const int m, const int incrementA,
                   const float* const A, const int incrementB, const float* const B);
 
 #endif // UTILS_H

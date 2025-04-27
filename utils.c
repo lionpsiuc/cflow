@@ -130,8 +130,9 @@ int mismatches(const int n, const int m, const int incrementA,
 }
 
 // Maximum (absolute) difference
-int maxdiff(const int n, const int m, const int incrementA,
-            const float* const A, const int incrementB, const float* const B) {
+float maxdiff(const int n, const int m, const int incrementA,
+              const float* const A, const int incrementB,
+              const float* const B) {
   float maxdiff  = 0;
   float currdiff = 0;
   for (int i = 0; i < n; i++) {
