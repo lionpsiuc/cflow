@@ -82,10 +82,13 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
     if (i < 2) {
       // Left halo
       if (tile_start <= 2) {
-        // Special case: wrapping around to end of row
-        global_col = (tile_start - 2 + i + m - 1) % m;
-        if (global_col == 0)
-          global_col = m;
+        // Special case: need values from the end of the row
+        if (tile_start - 2 + i < 0) {
+          // Use column m+tile_start-2+i (wraparound logic)
+          global_col = m + tile_start - 2 + i;
+        } else {
+          global_col = tile_start - 2 + i;
+        }
       } else {
         // Regular case: previous columns
         global_col = tile_start - 2 + i;
@@ -93,10 +96,14 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
     } else if (i >= actual_tile_size + 2) {
       // Right halo
       if (tile_end >= m - 1) {
-        // Special case: wrapping around to beginning of row
-        global_col = (i - (actual_tile_size + 2) + tile_end) % m;
-        if (global_col == 0)
-          global_col = 0; // Use boundary value
+        // Special case: need values from beginning of row
+        int overflow = (i - (actual_tile_size + 2) + tile_end) - m;
+        if (overflow >= 0) {
+          // Use column overflow (wraparound logic)
+          global_col = overflow;
+        } else {
+          global_col = i - (actual_tile_size + 2) + tile_end;
+        }
       } else {
         // Regular case: next columns
         global_col = tile_end + (i - (actual_tile_size + 2));
@@ -115,14 +122,18 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
 
   // Process tile
   for (int i = threadIdx.x; i < actual_tile_size; i += blockDim.x) {
-    // Skip column 0 (boundary condition)
-    if (tile_start + i == 0)
-      continue;
+    int global_col = tile_start + i;
 
-    // Shared memory indices (i+2 to account for halo)
+    // Column 0 is a boundary condition - set explicitly from src
+    if (global_col == 0) {
+      dst[row_offset] = src[row_offset];
+      continue;
+    }
+
+    // For other columns, apply the stencil
     int sh_idx = i + 2;
 
-    // Apply stencil
+    // Apply stencil with identical formula to CPU version
     float result =
         ((1.60f * sh_mem[sh_idx - 2]) + (1.55f * sh_mem[sh_idx - 1]) +
          sh_mem[sh_idx] + (0.60f * sh_mem[sh_idx + 1]) +
@@ -130,18 +141,27 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
         5.0f;
 
     // Write result to global memory
-    dst[row_offset + tile_start + i] = result;
+    dst[row_offset + global_col] = result;
   }
 
-  // Handle boundary condition for column 0
-  if (tile_start <= 1 && threadIdx.x == 0) {
-    dst[row_offset] = src[row_offset];
-  }
+  // Handle boundary conditions
+  // We need these barriers to ensure all threads have completed processing
+  __syncthreads();
 
-  // Update wraparound columns
-  if (tile_end >= m && threadIdx.x == 0) {
-    dst[row_offset + m]     = dst[row_offset + 0];
-    dst[row_offset + m + 1] = dst[row_offset + 1];
+  // Only let one thread per block handle the wraparound updates
+  if (threadIdx.x == 0) {
+    // If this tile includes column 0 (boundary)
+    if (tile_idx == 0) {
+      // Keep column 0 fixed
+      dst[row_offset] = src[row_offset];
+    }
+
+    // If this tile includes the end of the row, handle wraparound
+    if (tile_end == m) {
+      // Set wraparound columns explicitly identical to CPU implementation
+      dst[row_offset + m]     = dst[row_offset];     // Copy from column 0
+      dst[row_offset + m + 1] = dst[row_offset + 1]; // Copy from column 1
+    }
   }
 }
 
