@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   printf("Performing %d iterations...\n", iters);
   heat_propagation(iters, n, m, dst, src);
   cpu_times[timing_index++] = get_duration(&start_time);
-  printf("\tIterations completed in %.6f seconds\n", cpu_times[0]);
+  printf("Iterations completed in %.6f seconds\n", cpu_times[0]);
 
   // Averages, if requested
   if (average) {
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     start_time = get_current_time();
     average_rows(m, m, increment, dst, averages);
     cpu_times[timing_index++] = get_duration(&start_time);
-    printf("\tRow averages calculated in %.6f seconds\n", cpu_times[1]);
+    printf("Row averages calculated in %.6f seconds\n", cpu_times[1]);
   }
 
   printf("Completed the work on the CPU\n\n");
@@ -60,13 +60,12 @@ int main(int argc, char* argv[]) {
   printf("Performing %d iterations...\n", iters);
   float gpu_timing[4] = {0};
   heat_propagation_gpu(iters, n, m, dst_gpu, gpu_timing);
-  printf("\tEverything completed in %.6f seconds\n",
+  printf("Everything completed in %.6f seconds\n",
          gpu_timing[0] + gpu_timing[1] + gpu_timing[2] + gpu_timing[3]);
-  printf("\t\tMemory allocation on the GPU took %.6f seconds\n", gpu_timing[0]);
-  printf("\t\tInitialisation on the GPU took %.6f seconds\n", gpu_timing[1]);
-  printf("\t\tIterations completed in %.6f seconds\n", gpu_timing[2]);
-  printf("\t\tMemory transfer back to the CPU took %.6f seconds\n",
-         gpu_timing[3]);
+  printf("Memory allocation on the GPU took %.6f seconds\n", gpu_timing[0]);
+  printf("Initialisation on the GPU took %.6f seconds\n", gpu_timing[1]);
+  printf("Iterations completed in %.6f seconds\n", gpu_timing[2]);
+  printf("Memory transfer back to the CPU took %.6f seconds\n", gpu_timing[3]);
   printf("Completed the work on the GPU\n\n");
   // print_matrix(n, m, increment, dst_gpu);
 
