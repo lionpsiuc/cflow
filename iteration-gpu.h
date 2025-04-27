@@ -9,6 +9,7 @@ extern "C" {
 }
 #endif
 
-extern void test_wrapper(float* host_grid, int n, int m, float* timing);
+extern void heat_propagation_gpu(const int iters, const int n, const int m,
+                                 float* host_grid, float* timing);
 
 #endif

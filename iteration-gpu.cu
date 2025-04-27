@@ -23,121 +23,111 @@
   cudaEventDestroy(start);                                                     \
   cudaEventDestroy(end);
 
-// Initialise the grid on the GPU
 __global__ void init_gpu(const int n, const int m, const int increment,
                          float* const grid) {
-  const int i = blockIdx.x;  // Row index
-  const int j = threadIdx.x; // Column index
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  // Skip threads that are out of bounds
-  if (i >= n || j >= m)
+  if (i >= n)
     return;
 
-  // Calculate the initial value for this element
   float col0 = 0.98f * (float) ((i + 1) * (i + 1)) / (float) (n * n);
+  grid[i * increment + 0] = col0;
 
-  if (j == 0) {
-    grid[i * increment + j]     = col0; // First column
-    grid[i * increment + m + 0] = col0; // Set ghost column
-  } else {
-
-    // Interior points
+  // Set interior points
+  for (int j = 1; j < m; j++) {
     grid[i * increment + j] =
         col0 * ((float) (m - j) * (m - j) / (float) (m * m));
-
-    // Set the second ghost column
-    if (j == 1) {
-      grid[i * increment + m + 1] = grid[i * increment + j];
-    }
   }
+
+  // Set wraparound columns
+  grid[i * increment + m]     = grid[i * increment + 0];
+  grid[i * increment + m + 1] = grid[i * increment + 1];
 }
 
-// Perform a single iteration
-__global__ void iteration_gpu(const int n, const int m, const int increment,
-                              float* const dst, const float* const src) {
-  const int i = blockIdx.x;  // Row index; one row per block
-  const int j = threadIdx.x; // Column index within the row
+__global__ void iteration_gpu_shared(const int n, const int m,
+                                     const int increment, float* const dst,
+                                     const float* const src) {
+  int row      = blockIdx.x; // Each block handles one row
+  int local_id = threadIdx.x;
 
-  // Skip threads that are out of bounds
-  if (i >= n || j >= m)
+  if (row >= n)
     return;
 
-  const int rowOff =
-      i *
-      increment; // Calculate offset to the start of this row in global memory
+  const int row_offset = row * increment;
 
-  // Define shared memory layout
-  extern __shared__ float srow[];
+  // Allocate shared memory for a block of the row plus halo regions
+  extern __shared__ float shared_row[];
 
-  // Calculate index into shared memory; note that we leave space for left halo
-  const int sIdx = threadIdx.x + 2;
+  // Each thread loads one or more elements from global to shared memory
+  for (int col = local_id; col < m + 4; col += blockDim.x) {
+    // Map to the correct position in global memory with wraparound
+    int global_col;
+    if (col < 2) {
+      // Left halo comes from right edge of row (m-2 and m-1)
+      global_col = m - 2 + col;
+    } else if (col >= m + 2) {
+      // Right halo comes from left edge of row (0 and 1)
+      global_col = col - m;
+    } else {
+      // Regular column
+      global_col = col - 2;
+    }
 
-  if (j == 0) {
-    float v             = src[rowOff + 0];
-    dst[rowOff + 0]     = v;
-    dst[rowOff + m + 0] = v;
-    return;
+    // Load global memory into shared memory
+    shared_row[col] = src[row_offset + global_col];
   }
 
-  // Calculate wrap-around indices for neighbours; we still need modulo even
-  // with ghost columns because we are loading into shared memory
-  const int jm2 = (j - 2 + m) % m;
-  const int jm1 = (j - 1 + m) % m;
-  const int jp1 = (j + 1) % m;
-  const int jp2 = (j + 2) % m;
-
-  // Load into shared memory
-  srow[sIdx]     = src[rowOff + j];
-  srow[sIdx - 1] = src[rowOff + jm1];
-  srow[sIdx - 2] = src[rowOff + jm2];
-  srow[sIdx + 1] = src[rowOff + jp1];
-  srow[sIdx + 2] = src[rowOff + jp2];
-
-  // Ensure all threads in the block have loaded their values
+  // Synchronize to ensure all data is loaded into shared memory
   __syncthreads();
 
-  // Apply the five-point stencil using values from shared memory
-  float result =
-      ((1.60f * srow[sIdx - 2]) + (1.55f * srow[sIdx - 1]) + srow[sIdx] +
-       (0.60f * srow[sIdx + 1]) + (0.25f * srow[sIdx + 2])) /
-      5.0f;
+  // Handle column 0 separately as a boundary condition
+  if (local_id == 0) {
+    dst[row_offset] = src[row_offset];
+  }
 
-  // Write result to global memory
-  dst[rowOff + j] = result;
+  // Process columns in parallel using shared memory
+  for (int col = local_id + 1; col < m; col += blockDim.x) {
+    // Shared memory indices account for the 2-element halo on each side
+    // Col 1 in global memory is at index 3 in shared memory
+    int shared_idx = col + 2;
 
-  // Update the second ghost column when handling second column
-  if (j == 1) {
-    dst[rowOff + (m + 1)] = result;
+    // Apply the stencil using shared memory
+    float result =
+        ((1.60f * shared_row[shared_idx - 2]) +
+         (1.55f * shared_row[shared_idx - 1]) + shared_row[shared_idx] +
+         (0.60f * shared_row[shared_idx + 1]) +
+         (0.25f * shared_row[shared_idx + 2])) /
+        5.0f;
+
+    dst[row_offset + col] = result;
+  }
+
+  // Update wraparound columns
+  if (local_id == 0) {
+    dst[row_offset + m]     = dst[row_offset + 0];
+    dst[row_offset + m + 1] = dst[row_offset + 1];
   }
 }
 
-// Simple wrapper to test above functions
-extern "C" void test_wrapper(float* host_grid, int n, int m, float* timing) {
-  const int increment       = m + 2;
-  int       threadsPerBlock = 256; // Define block size
+extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
+                                     float* host_grid, float* timing) {
+  const int increment = m + 2; // Include extra columns for wraparound
 
-  // Ensure we don't exceed maximum threads per block
-  if (threadsPerBlock > 1024)
-    threadsPerBlock = 1024;
+  // Set up kernel parameters
+  int threadsPerBlock = 256;
+  int blocksForInit   = (n + threadsPerBlock - 1) / threadsPerBlock;
 
-  // If m is small, adjust threadsPerBlock to avoid wasting threads; this will
-  // still call 32 in the smallest cases so I need to figure out a better
-  // alternative
-  if (threadsPerBlock > m)
-    threadsPerBlock = m;
+  // Calculate shared memory size - need space for m elements plus halo regions
+  int sharedMemSize = (m + 4) * sizeof(float);
 
-  // Define grid size, where we have one block per row
-  int numBlocks = n;
+  // Use 1D grid for shared memory kernel - one block per row
+  dim3 blockSize(256);
+  dim3 gridSize(n);
 
-  // Allocate device memory
+  // Allocate memory on GPU
   float* device_src = NULL;
   float* device_dst = NULL;
   size_t grid_size  = n * increment * sizeof(float);
-
-  // Calculate shared memory size per block
-  const int sharedSzPerRow = m + 4; // Entire row enough for two extra columns
-                                    // on each side for the halo columns
-  const size_t shm_size = sharedSzPerRow * sizeof(float);
 
   cudaError_t error;
   TIME_INIT();
@@ -146,61 +136,113 @@ extern "C" void test_wrapper(float* host_grid, int n, int m, float* timing) {
   TIME_START();
   error = cudaMalloc((void**) &device_src, grid_size);
   if (error != cudaSuccess) {
-    fprintf(stderr, "Failed to allocate device source memory: %s\n",
+    fprintf(stderr, "Failed to allocate source memory: %s\n",
             cudaGetErrorString(error));
     return;
   }
+
   error = cudaMalloc((void**) &device_dst, grid_size);
   if (error != cudaSuccess) {
-    fprintf(stderr, "Failed to allocate device destination memory: %s\n",
+    fprintf(stderr, "Failed to allocate destination memory: %s\n",
             cudaGetErrorString(error));
     cudaFree(device_src);
     return;
   }
+
+  // Initialise with zeros to start
   cudaMemset(device_src, 0, grid_size);
   cudaMemset(device_dst, 0, grid_size);
   TIME_END();
 
-  // Run initialisation kernel
+  // Set up initial conditions
   TIME_START();
-  init_gpu<<<numBlocks, threadsPerBlock>>>(n, m, increment, device_src);
-  error = cudaDeviceSynchronize();
+  init_gpu<<<blocksForInit, threadsPerBlock>>>(n, m, increment, device_src);
+  error = cudaGetLastError();
   if (error != cudaSuccess) {
-    fprintf(stderr, "Error in initialisation kernel: %s\n",
+    fprintf(stderr, "Error launching init kernel: %s\n",
             cudaGetErrorString(error));
     cudaFree(device_src);
     cudaFree(device_dst);
     return;
   }
+
+  cudaDeviceSynchronize();
+
+  // Copy initial conditions to dst buffer too
+  cudaMemcpy(device_dst, device_src, grid_size, cudaMemcpyDeviceToDevice);
   TIME_END();
 
-  // Run iteration kernel
+  // Perform iterations
   TIME_START();
-  iteration_gpu<<<numBlocks, threadsPerBlock, shm_size>>>(
-      n, m, increment, device_dst, device_src);
-  error = cudaDeviceSynchronize();
+
+  printf("Starting iterations on GPU...\n");
+
+  // Handle special case for odd iteration count
+  if (iters % 2 != 0) {
+    iteration_gpu_shared<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, device_dst, device_src);
+    error = cudaGetLastError();
+    if (error != cudaSuccess) {
+      fprintf(stderr, "Error launching iteration kernel: %s\n",
+              cudaGetErrorString(error));
+      cudaFree(device_src);
+      cudaFree(device_dst);
+      return;
+    }
+
+    cudaDeviceSynchronize();
+
+    // Swap pointers for the next iterations
+    float* temp = device_src;
+    device_src  = device_dst;
+    device_dst  = temp;
+  }
+
+  // Run paired iterations
+  for (int iter = 0; iter < iters / 2; iter++) {
+    // Print progress for large iterations
+    if (iters >= 100 && iter % 100 == 0) {
+      printf("GPU completed %d iterations\n", iter * 2);
+    }
+
+    // First iteration in the pair
+    iteration_gpu_shared<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, device_dst, device_src);
+    error = cudaGetLastError();
+    if (error != cudaSuccess) {
+      fprintf(stderr, "Error in iteration %d (first): %s\n", iter,
+              cudaGetErrorString(error));
+      break;
+    }
+
+    cudaDeviceSynchronize();
+
+    // Second iteration in the pair
+    iteration_gpu_shared<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, device_src, device_dst);
+    error = cudaGetLastError();
+    if (error != cudaSuccess) {
+      fprintf(stderr, "Error in iteration %d (second): %s\n", iter,
+              cudaGetErrorString(error));
+      break;
+    }
+
+    cudaDeviceSynchronize();
+  }
+
+  printf("GPU iterations complete\n");
+  TIME_END();
+
+  // Copy results back to the host
+  TIME_START();
+  error = cudaMemcpy(host_grid, device_src, grid_size, cudaMemcpyDeviceToHost);
   if (error != cudaSuccess) {
-    fprintf(stderr, "Error in iteration kernel: %s\n",
+    fprintf(stderr, "Failed to copy results back to host: %s\n",
             cudaGetErrorString(error));
-    cudaFree(device_src);
-    cudaFree(device_dst);
-    return;
   }
   TIME_END();
 
-  // Copy results back to host
-  TIME_START();
-  error = cudaMemcpy(host_grid, device_dst, grid_size, cudaMemcpyDeviceToHost);
-  if (error != cudaSuccess) {
-    fprintf(stderr, "Failed to copy result back to host: %s\n",
-            cudaGetErrorString(error));
-    cudaFree(device_src);
-    cudaFree(device_dst);
-    return;
-  }
-  TIME_END();
-
-  // Free device memory
+  // Free GPU memory
   cudaFree(device_src);
   cudaFree(device_dst);
 
