@@ -1,38 +1,27 @@
-#define _POSIX_C_SOURCE 200809L
+#include "../include/utils.h"
 
-#include <math.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-
-#include "utils.h"
-
-// Prints command-line usage
-static void help() {
-  printf("Usage: ");
-  printf("./assignment2 ");
-  printf("-n <rows> ");
-  printf("-m <columns> ");
-  printf("-p <iters> ");
-  printf("-a ");
-  printf("-c ");
-  printf("-t ");
-  printf("-h\n");
-}
-
-// Reads variables from strings
+/**
+ * @brief Explain briefly.
+ *
+ * @param flag Explain briefly.
+ * @param variable Explain briefly.
+ * @param format Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 static void parse_argument(const char flag, void* const variable,
                            const char format[]) {
   if (sscanf(optarg, format, variable) != 1) {
-    fprintf(stderr, "Couldn't read -%c argument\n", flag);
-    help();
+    fprintf(stderr, "Error: Couldn't read -%c argument\n", flag);
     exit(EXIT_FAILURE);
   }
 }
 
-// Creates an arguments struct with default values
+/**
+ * @brief Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 static arguments defaults(void) {
   arguments args;
   args.n       = 32;
@@ -44,7 +33,14 @@ static arguments defaults(void) {
   return args;
 }
 
-// Parses command-line arguments
+/**
+ * @brief Explain briefly.
+ *
+ * @param argc Explain briefly.
+ * @param argv Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 arguments parse(const int argc, char* const argv[]) {
   arguments args = defaults(); // Start with the default arguments
 
@@ -59,42 +55,45 @@ arguments parse(const int argc, char* const argv[]) {
       case 'a': args.average = true; break;
       case 'c': args.cpu = true; break;
       case 't': args.timing = true; break;
-      case 'h':
-        help();
-        exit(EXIT_SUCCESS);
-        break;
-      default:
-        help();
-        exit(EXIT_FAILURE);
-        break;
+      default: exit(EXIT_FAILURE); break;
     }
   }
 
   // Some extra checks
   if (args.n <= 0) {
-    fprintf(stderr, "Matrix must have positive height\n");
+    fprintf(stderr, "Error: The matrix must have positive height\n");
     exit(EXIT_FAILURE);
   }
   if (args.m <= 0) {
-    fprintf(stderr, "Matrix must have positive width\n");
+    fprintf(stderr, "Error: The matrix must have positive width\n");
     exit(EXIT_FAILURE);
   }
   if (args.iters < 0) {
-    fprintf(stderr, "Number of iterations must be non-negative\n");
+    fprintf(stderr, "Error: The number of iterations must be non-negative\n");
     exit(EXIT_FAILURE);
   }
 
   return args;
 }
 
-// Returns the current time in seconds
+/**
+ * @brief Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 double get_current_time(void) {
   struct timespec current_time;
   clock_gettime(CLOCK_MONOTONIC, &current_time);
   return (double) current_time.tv_sec + (double) current_time.tv_nsec * 1e-9;
 }
 
-// Calculates the duration since the given time and updates the time to now
+/**
+ * @brief Explain briefly.
+ *
+ * @param time Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 double get_duration(double* const time) {
   const double now  = get_current_time();
   const double diff = now - *time;
@@ -102,7 +101,16 @@ double get_duration(double* const time) {
   return diff;
 }
 
-// Prints the matrix
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param increment Explain briefly.
+ * @param dst Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 void print_matrix(const int n, const int m, const int increment,
                   float* const dst) {
   for (int i = 0; i < n; i++) {
@@ -113,15 +121,26 @@ void print_matrix(const int n, const int m, const int increment,
   }
 }
 
-// Count the number of mismatches larger than the given tolerance
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param incrementA Explain briefly.
+ * @param A Explain briefly.
+ * @param incrementB Explain briefly.
+ * @param B Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 int mismatches(const int n, const int m, const int incrementA,
-               const float* const A, const int incrementB,
-               const float* const B) {
-  int         count = 0;
-  const float tol   = 1e-4f;
+               const precision* const A, const int incrementB,
+               const precision* const B) {
+  int          count = 0;
+  const double tol   = 1e-4;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      if (fabsf(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
+      if (fabs(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
         count++;
       }
     }
@@ -129,15 +148,26 @@ int mismatches(const int n, const int m, const int incrementA,
   return count;
 }
 
-// Maximum (absolute) difference
-float maxdiff(const int n, const int m, const int incrementA,
-              const float* const A, const int incrementB,
-              const float* const B) {
-  float maxdiff  = 0;
-  float currdiff = 0;
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param incrementA Explain briefly.
+ * @param A Explain briefly.
+ * @param incrementB Explain briefly.
+ * @param B Explain briefly.
+ *
+ * @return Explain briefly.
+ */
+double maxdiff(const int n, const int m, const int incrementA,
+               const precision* const A, const int incrementB,
+               const precision* const B) {
+  double maxdiff  = 0;
+  double currdiff = 0;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      currdiff = fabsf(A[i * incrementA + j] - B[i * incrementB + j]);
+      currdiff = fabs(A[i * incrementA + j] - B[i * incrementB + j]);
       if (currdiff > maxdiff) {
         maxdiff = currdiff;
       }
