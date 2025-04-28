@@ -21,7 +21,7 @@ static int get_current_device_index(void) {
  *
  * @return Maximum shared memory in bytes, or negative on error.
  */
-int max_shared_memory_per_block(void) {
+int sm_per_block(void) {
   int device_index = get_current_device_index();
   if (device_index < 0) {
     return -1;

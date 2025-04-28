@@ -11,7 +11,7 @@ extern "C" {
  *
  * @return Maximum shared memory in bytes, or negative on error.
  */
-int max_shared_memory_per_block(void);
+int sm_per_block(void);
 
 /**
  * @brief Gets the compute capability of the currently selected device.
