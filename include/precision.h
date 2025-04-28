@@ -1,14 +1,11 @@
-#ifndef PRECISION_H
-#define PRECISION_H
+#pragma once
 
 #include <math.h>
 
 #ifdef DOUBLE
-typedef double precision;
+typedef double PRECISION;
 #define abs(input) fabs(input)
 #else
-typedef float precision;
+typedef float PRECISION;
 #define abs(input) fabsf(input)
 #endif
-
-#endif // PRECISION_H

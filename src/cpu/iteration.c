@@ -1,4 +1,4 @@
-#include "../include/iteration.h"
+#include "../../include/iteration.h"
 
 /**
  * @brief Explain briefly.
@@ -9,7 +9,7 @@
  *
  * @return Explain briefly.
  */
-static void init(const int n, const int m, precision* const grid) {
+static void init(const int n, const int m, PRECISION* const grid) {
   const int increment = m + 2; // We need to skip the last two columns since
                                // they are copies of the first and second column
 
@@ -43,20 +43,20 @@ static void init(const int n, const int m, precision* const grid) {
  *
  * @return Explain briefly.
  */
-static void iteration(const int m, precision* const restrict dst,
-                      const precision* const restrict src) {
+static void iteration(const int m, PRECISION* const restrict dst,
+                      const PRECISION* const restrict src) {
 
   // Here, we deal with the column at j = 1, since it also wraps around
   {
     int j = 1;
 
     // Left neighbours
-    precision old_l2 = src[m - 1];
-    precision old_l1 = src[0];
+    PRECISION old_l2 = src[m - 1];
+    PRECISION old_l1 = src[0];
 
     // Right neighbours
-    precision old_r1 = src[j + 1];
-    precision old_r2 = src[j + 2];
+    PRECISION old_r1 = src[j + 1];
+    PRECISION old_r2 = src[j + 2];
 
 #ifdef double
     dst[j] = ((1.60 * old_l2) + (1.55 * old_l1) + src[j] + (0.60 * old_r1) +
@@ -98,8 +98,8 @@ static void iteration(const int m, precision* const restrict dst,
  *
  * @return Explain briefly.
  */
-static void iterations(const int iters, const int m, precision* restrict dst,
-                       precision* restrict src) {
+static void iterations(const int iters, const int m, PRECISION* restrict dst,
+                       PRECISION* restrict src) {
   if (iters % 2 != 0) {
     iteration(m, dst, src);
   }
@@ -122,7 +122,7 @@ static void iterations(const int iters, const int m, precision* restrict dst,
  * @return Explain briefly.
  */
 void heat_propagation(const int iters, const int n, const int m,
-                      precision* restrict dst, precision* restrict src) {
+                      PRECISION* restrict dst, PRECISION* restrict src) {
   const int increment = m + 2;
 
   // Set initial conditions
@@ -130,8 +130,8 @@ void heat_propagation(const int iters, const int n, const int m,
   init(n, m, src);
 
   for (int i = 0; i < n; i++) {
-    precision* const row_dst = dst + i * increment;
-    precision* const row_src = src + i * increment;
+    PRECISION* const row_dst = dst + i * increment;
+    PRECISION* const row_src = src + i * increment;
     iterations(iters, m, row_dst, row_src); // Perform the iterations
   }
   return;

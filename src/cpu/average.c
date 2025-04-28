@@ -1,4 +1,4 @@
-#include "../include/average.h"
+#include "../../include/average.h"
 
 /**
  * @brief Explain briefly.
@@ -12,7 +12,7 @@
  * @return Explain briefly.
  */
 int average_rows(const int n, const int m, const int increment,
-                 const precision* const dst, precision* const averages) {
+                 const PRECISION* const dst, PRECISION* const averages) {
 
   // Initialise averages to zero
   for (int i = 0; i < n; i++) {

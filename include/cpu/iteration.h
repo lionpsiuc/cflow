@@ -1,7 +1,6 @@
-#ifndef ITERATION_H
-#define ITERATION_H
+#pragma once
 
-#include "precision.h"
+#include "../precision.h"
 
 /**
  * @brief Explain briefly.
@@ -15,6 +14,4 @@
  * @return Explain briefly.
  */
 void heat_propagation(const int iters, const int n, const int m,
-                      precision* restrict dst, precision* restrict src);
-
-#endif // ITERATION_H
+                      PRECISION* restrict dst, PRECISION* restrict src);

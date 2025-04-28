@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #define _POSIX_C_SOURCE 200809L
 
@@ -61,7 +60,7 @@ double get_duration(double* const time);
  * @return Explain briefly.
  */
 void print_matrix(const int n, const int m, const int increment,
-                  precision* const dst);
+                  PRECISION* const dst);
 
 /**
  * @brief Explain briefly.
@@ -76,8 +75,8 @@ void print_matrix(const int n, const int m, const int increment,
  * @return Explain briefly.
  */
 int mismatches(const int n, const int m, const int incrementA,
-               const precision* const A, const int incrementB,
-               const precision* const B);
+               const PRECISION* const A, const int incrementB,
+               const PRECISION* const B);
 
 /**
  * @brief Explain briefly.
@@ -91,8 +90,6 @@ int mismatches(const int n, const int m, const int incrementA,
  *
  * @return Explain briefly.
  */
-precision maxdiff(const int n, const int m, const int incrementA,
-                  const precision* const A, const int incrementB,
-                  const precision* const B);
-
-#endif // UTILS_H
+double maxdiff(const int n, const int m, const int incrementA,
+               const PRECISION* const A, const int incrementB,
+               const PRECISION* const B);

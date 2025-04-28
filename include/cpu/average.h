@@ -1,7 +1,6 @@
-#ifndef AVERAGE_H
-#define AVERAGE_H
+#pragma once
 
-#include "precision.h"
+#include "../PRECISION.h"
 
 /**
  * @brief Explain briefly.
@@ -15,6 +14,4 @@
  * @return Explain briefly.
  */
 int average_rows(const int n, const int m, const int increment,
-                 const precision* const dst, precision* const averages);
-
-#endif // AVERAGE_H
+                 const PRECISION* const dst, PRECISION* const averages);
