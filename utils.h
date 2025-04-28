@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdbool.h>
+
 typedef struct {
   int  n;       // Number of rows (i.e., height)
   int  m;       // Number of columns (i.e., width)
