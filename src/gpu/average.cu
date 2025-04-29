@@ -76,7 +76,7 @@ extern "C" int average_rows_gpu(const int n, const int m, const int increment,
   if (last_error != cudaSuccess) {
     fprintf(stderr, "ERROR: Failed to allocate device averages memory.\n");
     error_flag = 1;
-    TIME_FINISH();
+    END();
     return error_flag;
   }
   END();

@@ -1,4 +1,4 @@
-#include "../../include/average.h"
+#include "../../include/cpu/average.h"
 
 /**
  * @brief Explain briefly.

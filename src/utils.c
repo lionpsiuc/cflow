@@ -134,13 +134,13 @@ void print_matrix(const int n, const int m, const int increment,
  * @return Explain briefly.
  */
 int mismatches(const int n, const int m, const int incrementA,
-               const precision* const A, const int incrementB,
-               const precision* const B) {
-  int          count = 0;
-  const double tol   = 1e-4;
+               const float* const A, const int incrementB,
+               const float* const B) {
+  int         count = 0;
+  const float tol   = 1e-4f;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      if (fabs(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
+      if (fabsf(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
         count++;
       }
     }
@@ -160,14 +160,14 @@ int mismatches(const int n, const int m, const int incrementA,
  *
  * @return Explain briefly.
  */
-double maxdiff(const int n, const int m, const int incrementA,
-               const precision* const A, const int incrementB,
-               const precision* const B) {
-  double maxdiff  = 0;
-  double currdiff = 0;
+float maxdiff(const int n, const int m, const int incrementA,
+              const float* const A, const int incrementB,
+              const float* const B) {
+  float maxdiff  = 0;
+  float currdiff = 0;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      currdiff = fabs(A[i * incrementA + j] - B[i * incrementB + j]);
+      currdiff = fabsf(A[i * incrementA + j] - B[i * incrementB + j]);
       if (currdiff > maxdiff) {
         maxdiff = currdiff;
       }

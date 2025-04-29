@@ -2,27 +2,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Include local headers
-#include "average-gpu.h"
-#include "average.h"
-#include "iteration-gpu.h"
-#include "iteration.h"
-#include "utils.h"
+#include "../include/cpu/average.h"
+#include "../include/cpu/iteration.h"
+#include "../include/gpu/average.h"
+#include "../include/gpu/iteration.h"
+#include "../include/utils.h"
 
 int main(int argc, char* argv[]) {
-  arguments   args      = parse(argc, argv);
-  const int   n         = args.n;
-  const int   m         = args.m;
-  const int   increment = m + 2;
-  const int   iters     = args.iters;
-  const bool  average   = args.average;
-  const bool  cpu       = args.cpu;
-  const bool  timing    = args.timing;
-  const float tolerance = 1e-4f;
+  arguments  args      = parse(argc, argv);
+  const int  n         = args.n;
+  const int  m         = args.m;
+  const int  increment = m + 2;
+  const int  iters     = args.iters;
+  const bool average   = args.average;
+  const bool cpu       = args.cpu;
+  const bool timing    = args.timing;
 
   printf("Matrix:\t\t%d x %d (x %d iterations)\n", n, m, iters);
   printf("Precision:\tFP32\n");
-  printf("Tolerance:\t%.2e\n", tolerance);
 
   float* cpu_matrix   = NULL;
   float* cpu_averages = NULL;

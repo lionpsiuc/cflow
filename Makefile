@@ -1,31 +1,75 @@
 CC   = gcc
 NVCC = nvcc
 
-CFLAGS  = -funroll-loops -march=native -O3 -std=c2x -Wall -Wextra
-NVFLAGS = -O3 --use_fast_math -arch=sm_86
+# Directories
+SRC_DIR = src
+INC_DIR = include
+OBJ_DIR = obj
 
+# Create obj directories if they don't exist
+$(shell mkdir -p $(OBJ_DIR)/cpu $(OBJ_DIR)/gpu)
+
+# Compiler flags
+CFLAGS = -funroll-loops -march=native -O3 -std=c11 -Wall -Wextra -I$(INC_DIR) -I.
+NVFLAGS = -O3 --use_fast_math -arch=sm_86 -I$(INC_DIR) -I.
+
+# Target executable
 TARGET = assignment2
 
-CSRCS  = assignment2.c average.c iteration.c utils.c
-CUSRCS = iteration-gpu.cu average-gpu.cu
-HDRS   = average.h iteration.h iteration-gpu.h utils.h average-gpu.h
+# Source files
+CPU_SRCS = $(SRC_DIR)/cpu/average.c $(SRC_DIR)/cpu/iteration.c
+GPU_SRCS = $(SRC_DIR)/gpu/average.cu $(SRC_DIR)/gpu/iteration.cu
+COMMON_SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/utils.c
 
-COBJS  = $(CSRCS:.c=.o)
-CUOBJS = $(CUSRCS:.cu=.o)
-OBJS   = $(COBJS) $(CUOBJS)
+# Object files
+CPU_OBJS = $(patsubst $(SRC_DIR)/cpu/%.c, $(OBJ_DIR)/cpu/%.o, $(CPU_SRCS))
+GPU_OBJS = $(patsubst $(SRC_DIR)/gpu/%.cu, $(OBJ_DIR)/gpu/%.o, $(GPU_SRCS))
+COMMON_OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(COMMON_SRCS))
 
-all: $(TARGET)
+# All object files
+OBJS = $(CPU_OBJS) $(GPU_OBJS) $(COMMON_OBJS)
 
+# Create header wrappers to maintain compatibility with old includes
+HEADER_WRAPPERS = average.h iteration.h average-gpu.h iteration-gpu.h
+
+# Default target
+all: $(HEADER_WRAPPERS) $(TARGET)
+
+# Create header wrappers (backwards compatibility)
+average.h:
+	@echo '#pragma once' > $@
+	@echo '#include "$(INC_DIR)/cpu/average.h"' >> $@
+
+iteration.h:
+	@echo '#pragma once' > $@
+	@echo '#include "$(INC_DIR)/cpu/iteration.h"' >> $@
+
+average-gpu.h:
+	@echo '#pragma once' > $@
+	@echo '#include "$(INC_DIR)/gpu/average.h"' >> $@
+
+iteration-gpu.h:
+	@echo '#pragma once' > $@
+	@echo '#include "$(INC_DIR)/gpu/iteration.h"' >> $@
+
+# Linking the target
 $(TARGET): $(OBJS)
 	$(NVCC) $(NVFLAGS) $^ -o $@ -lm
 
-%.o: %.c $(HDRS)
+# Compile CPU source files
+$(OBJ_DIR)/cpu/%.o: $(SRC_DIR)/cpu/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o: %.cu
+# Compile GPU source files
+$(OBJ_DIR)/gpu/%.o: $(SRC_DIR)/gpu/%.cu
 	$(NVCC) $(NVFLAGS) -c $< -o $@
 
+# Compile common source files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Clean up
 clean:
-	rm -f $(TARGET) $(COBJS) $(CUOBJS)
+	rm -f $(OBJ_DIR)/cpu/*.o $(OBJ_DIR)/gpu/*.o $(OBJ_DIR)/*.o $(TARGET) $(HEADER_WRAPPERS)
 
 .PHONY: all clean

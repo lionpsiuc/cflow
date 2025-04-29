@@ -111,7 +111,7 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
   if (last_error != cudaSuccess) {
     fprintf(stderr, "ERROR: Failed to allocate source memory.\n");
     error_flag = 1;
-    TIME_FINISH();
+    END();
     *device_grid_out = NULL;
     return error_flag;
   }
@@ -120,7 +120,7 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
     fprintf(stderr, "ERROR: Failed to allocate destination memory.\n");
     cudaFree(device_src);
     error_flag = 1;
-    TIME_FINISH();
+    END();
     *device_grid_out = NULL;
     return error_flag;
   }

@@ -9,7 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "precision.h"
+// #include "precision.h"
 
 /**
  * @brief Explain briefly.
@@ -90,6 +90,5 @@ int mismatches(const int n, const int m, const int incrementA,
  *
  * @return Explain briefly.
  */
-double maxdiff(const int n, const int m, const int incrementA,
-               const float* const A, const int incrementB,
-               const float* const B);
+float maxdiff(const int n, const int m, const int incrementA,
+              const float* const A, const int incrementB, const float* const B);
