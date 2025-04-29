@@ -60,7 +60,7 @@ double get_duration(double* const time);
  * @return Explain briefly.
  */
 void print_matrix(const int n, const int m, const int increment,
-                  PRECISION* const dst);
+                  float* const dst);
 
 /**
  * @brief Explain briefly.
@@ -75,8 +75,8 @@ void print_matrix(const int n, const int m, const int increment,
  * @return Explain briefly.
  */
 int mismatches(const int n, const int m, const int incrementA,
-               const PRECISION* const A, const int incrementB,
-               const PRECISION* const B);
+               const float* const A, const int incrementB,
+               const float* const B);
 
 /**
  * @brief Explain briefly.
@@ -91,5 +91,5 @@ int mismatches(const int n, const int m, const int incrementA,
  * @return Explain briefly.
  */
 double maxdiff(const int n, const int m, const int incrementA,
-               const PRECISION* const A, const int incrementB,
-               const PRECISION* const B);
+               const float* const A, const int incrementB,
+               const float* const B);

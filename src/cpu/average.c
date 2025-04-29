@@ -12,7 +12,7 @@
  * @return Explain briefly.
  */
 int average_rows(const int n, const int m, const int increment,
-                 const PRECISION* const dst, PRECISION* const averages) {
+                 const float* const dst, float* const averages) {
 
   // Initialise averages to zero
   for (int i = 0; i < n; i++) {

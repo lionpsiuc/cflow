@@ -9,7 +9,7 @@
  *
  * @return Explain briefly.
  */
-static void init(const int n, const int m, PRECISION* const grid) {
+static void init(const int n, const int m, float* const grid) {
   const int increment = m + 2; // We need to skip the last two columns since
                                // they are copies of the first and second column
 
@@ -43,43 +43,31 @@ static void init(const int n, const int m, PRECISION* const grid) {
  *
  * @return Explain briefly.
  */
-static void iteration(const int m, PRECISION* const restrict dst,
-                      const PRECISION* const restrict src) {
+static void iteration(const int m, float* const restrict dst,
+                      const float* const restrict src) {
 
   // Here, we deal with the column at j = 1, since it also wraps around
   {
     int j = 1;
 
     // Left neighbours
-    PRECISION old_l2 = src[m - 1];
-    PRECISION old_l1 = src[0];
+    float old_l2 = src[m - 1];
+    float old_l1 = src[0];
 
     // Right neighbours
-    PRECISION old_r1 = src[j + 1];
-    PRECISION old_r2 = src[j + 2];
+    float old_r1 = src[j + 1];
+    float old_r2 = src[j + 2];
 
-#ifdef double
-    dst[j] = ((1.60 * old_l2) + (1.55 * old_l1) + src[j] + (0.60 * old_r1) +
-              (0.25 * old_r2)) /
-             5.0;
-#else
     dst[j] = ((1.60f * old_l2) + (1.55f * old_l1) + src[j] + (0.60f * old_r1) +
               (0.25f * old_r2)) /
              5.0f;
-#endif
   }
 
   // Other updates
   for (int j = 2; j < m; j++) {
-#ifdef double
-    dst[j] = ((1.60 * src[j - 2]) + (1.55 * src[j - 1]) + src[j] +
-              (0.60 * src[j + 1]) + (0.25 * src[j + 2])) /
-             5.0;
-#else
     dst[j] = ((1.60f * src[j - 2]) + (1.55f * src[j - 1]) + src[j] +
               (0.60f * src[j + 1]) + (0.25f * src[j + 2])) /
              5.0f;
-#endif
   }
 
   // Refresh our extra columns for further iterations
@@ -98,8 +86,8 @@ static void iteration(const int m, PRECISION* const restrict dst,
  *
  * @return Explain briefly.
  */
-static void iterations(const int iters, const int m, PRECISION* restrict dst,
-                       PRECISION* restrict src) {
+static void iterations(const int iters, const int m, float* restrict dst,
+                       float* restrict src) {
   if (iters % 2 != 0) {
     iteration(m, dst, src);
   }
@@ -122,7 +110,7 @@ static void iterations(const int iters, const int m, PRECISION* restrict dst,
  * @return Explain briefly.
  */
 void heat_propagation(const int iters, const int n, const int m,
-                      PRECISION* restrict dst, PRECISION* restrict src) {
+                      float* restrict dst, float* restrict src) {
   const int increment = m + 2;
 
   // Set initial conditions
@@ -130,8 +118,8 @@ void heat_propagation(const int iters, const int n, const int m,
   init(n, m, src);
 
   for (int i = 0; i < n; i++) {
-    PRECISION* const row_dst = dst + i * increment;
-    PRECISION* const row_src = src + i * increment;
+    float* const row_dst = dst + i * increment;
+    float* const row_src = src + i * increment;
     iterations(iters, m, row_dst, row_src); // Perform the iterations
   }
   return;

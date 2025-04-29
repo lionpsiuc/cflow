@@ -14,4 +14,4 @@
  * @return Explain briefly.
  */
 void heat_propagation(const int iters, const int n, const int m,
-                      PRECISION* restrict dst, PRECISION* restrict src);
+                      float* restrict dst, float* restrict src);
