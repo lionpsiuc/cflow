@@ -3,7 +3,10 @@
 #include <stdio.h>
 
 /**
- * @brief Explain briefly.
+ * @brief Initialises CUDA event timers and a timing array index.
+ *
+ * This macro should be called once at the beginning of a function where timing
+ * is needed.
  */
 #define INIT()                                                                 \
   cudaEvent_t start;                                                           \
@@ -13,12 +16,15 @@
   int index = 0
 
 /**
- * @brief Explain briefly.
+ * @brief Records the start CUDA event in the default stream.
+ *
+ * Marks the beginning of a code section to be timed. Assumes start event has
+ * been created by INIT.
  */
 #define START() cudaEventRecord(start)
 
 /**
- * @brief Explain briefly.
+ * @brief Records the end CUDA event, calculates elapsed time, and stores it.
  */
 #define END()                                                                  \
   cudaEventRecord(end);                                                        \
@@ -31,7 +37,9 @@
   index++
 
 /**
- * @brief Explain briefly.
+ * @brief Destroys the CUDA event objects created by INIT.
+ *
+ * This should be called once at the end of the function where INIT was called.
  */
 #define COMPLETE()                                                             \
   cudaEventDestroy(start);                                                     \

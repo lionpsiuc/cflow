@@ -20,7 +20,7 @@
  * @param[in]  dst       Pointer to the input matrix data.
  * @param[out] averages  Pointer to the output array to store row averages.
  *
- * @return A value of 0, indicating success.
+ * @return int Returns 0, indicating success.
  */
 int average_rows(const int n, const int m, const int increment,
                  const float* const dst, float* const averages);

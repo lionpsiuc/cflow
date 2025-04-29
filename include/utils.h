@@ -40,7 +40,8 @@ typedef struct {
  * @param[in] argc The argument count passed to main.
  * @param[in] argv The argument vector passed to main.
  *
- * @return An arguments struct populated with parsed or default values.
+ * @return arguments An arguments struct populated with parsed or default
+ *                   values.
  */
 arguments parse(const int argc, char* const argv[]);
 
@@ -49,7 +50,7 @@ arguments parse(const int argc, char* const argv[]);
  *
  * Uses clock_gettime with CLOCK_MONOTONIC to retrieve the current time.
  *
- * @return The current time in seconds, as a double-precision float.
+ * @return double The current time in seconds, as a double-precision float.
  */
 double get_current_time(void);
 
@@ -63,7 +64,7 @@ double get_current_time(void);
  * @param[in,out] time Pointer to a double storing a previous time value; this
  *                     value is updated to the current time upon exit.
  *
- * @return The elapsed time duration in seconds.
+ * @return double The elapsed time duration in seconds.
  */
 double get_duration(double* const time);
 
@@ -97,7 +98,8 @@ void print_matrix(const int n, const int m, const int increment,
  * @param[in] incrementB The row increment (i.e., stride) for matrix B.
  * @param[in] B          Pointer to the second matrix data.
  *
- * @return The total number of element pairs whose difference exceeds tolerance.
+ * @return int The total number of element pairs whose difference exceeds
+ *             tolerance.
  */
 int mismatches(const int n, const int m, const int incrementA,
                const float* const A, const int incrementB,
@@ -116,7 +118,8 @@ int mismatches(const int n, const int m, const int incrementA,
  * @param[in] incrementB The row increment (i.e., stride) for matrix B.
  * @param[in] B          Pointer to the second matrix data.
  *
- * @return The maximum absolute difference found between corresponding elements.
+ * @return float The maximum absolute difference found between corresponding
+ *               elements.
  */
 float maxdiff(const int n, const int m, const int incrementA,
               const float* const A, const int incrementB, const float* const B);
