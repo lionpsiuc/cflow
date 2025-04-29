@@ -5,6 +5,7 @@
 #include "../include/utils.h"
 
 int main(int argc, char* argv[]) {
+
   arguments  args      = parse(argc, argv);
   const int  n         = args.n;
   const int  m         = args.m;
@@ -14,8 +15,8 @@ int main(int argc, char* argv[]) {
   const bool cpu       = args.cpu;
   const bool timing    = args.timing;
 
-  printf("Matrix:\t\t%d x %d (x %d iterations)\n", n, m, iters);
-  printf("Precision:\tFP32\n");
+  printf("\n  Matrix:    %d x %d (%d iterations)\n", n, m, iters);
+  printf("  Precision: FP32\n");
 
   float* cpu_matrix   = NULL;
   float* cpu_averages = NULL;
@@ -26,6 +27,7 @@ int main(int argc, char* argv[]) {
   cpu_matrix  = calloc(n * increment, sizeof(float));
   gpu_matrix  = calloc(n * increment, sizeof(float));
   temp_matrix = calloc(n * increment, sizeof(float));
+
   if (average) {
     cpu_averages = calloc(n, sizeof(float));
     gpu_averages = calloc(n, sizeof(float));
@@ -47,97 +49,95 @@ int main(int argc, char* argv[]) {
   int    cpu_timing_index = 0;
 
   if (!cpu) {
-    printf("Performing CPU iterations...\n");
+    printf("\n  Performing CPU iterations...\n");
     heat_propagation(iters, n, m, cpu_matrix, temp_matrix);
     cpu_times[cpu_timing_index++] = get_duration(&start_time);
-    printf("CPU iterations done.\n");
+    printf("  CPU iterations done\n");
     if (average) {
-      printf("Performing CPU averaging...\n");
+      printf("\n  Performing CPU averaging...\n");
       start_time = get_current_time();
       average_rows(n, m, increment, cpu_matrix, cpu_averages);
       cpu_times[cpu_timing_index++] = get_duration(&start_time);
-      printf("CPU averaging done.\n");
+      printf("  CPU averaging done\n");
     }
   } else {
-    printf("Skipping CPU computations.\n");
+    printf("\n  Skipping CPU computations\n");
   }
-
-  // --- GPU Computations ---
   float* device_final_matrix = NULL;
 
-  printf("Performing GPU iterations...\n");
+  printf("\n  Performing GPU iterations...\n");
   float gpu_iteration_timing[4] = {0.0f};
-  // Call modified GPU iteration function
-  heat_propagation_gpu(iters, n, m,
-                       gpu_matrix, // Pass host buffer for result copy
-                       gpu_iteration_timing, &device_final_matrix);
-  printf("GPU iterations done.\n");
+  heat_propagation_gpu(iters, n, m, gpu_matrix, gpu_iteration_timing,
+                       &device_final_matrix);
+  printf("\n  GPU iterations done\n");
 
-  // GPU Averaging (Optional)
   float gpu_averaging_timing[5] = {0.0f};
   if (average) {
-    printf("Performing GPU averaging...\n");
+    printf("\n  Performing GPU averaging...\n");
     // Call modified GPU averaging function
     average_rows_gpu(n, m, increment,
                      device_final_matrix, // Pass device pointer
                      gpu_averages, gpu_averaging_timing);
-    printf("GPU averaging done.\n");
+    printf("  GPU averaging done\n");
   }
 
-  // --- Output Comparison and Timing Info ---
-  printf("\nITERATIONS\n");
+  printf("\n  Results for propagation\n\n");
   if (!cpu) {
     int matrix_mismatches =
         mismatches(n, m, increment, cpu_matrix, increment, gpu_matrix);
     float matrix_maxdiff =
         maxdiff(n, m, increment, cpu_matrix, increment, gpu_matrix);
-    printf("\tMismatches: %d\n", matrix_mismatches);
-    printf("\tMaximum difference: %.2e\n", matrix_maxdiff);
-    if (timing) {
-      printf("\t-------------------------------------------------\n");
-      float total_gpu_iter_time = 0.0f;
-      for (int i = 0; i < 4; i++) {
-        total_gpu_iter_time += gpu_iteration_timing[i];
-      }
-      if (total_gpu_iter_time > 0)
-        printf("\tSpeedup (overall): %.2f\n",
-               cpu_times[0] / total_gpu_iter_time);
-      else
-        printf("\tSpeedup (overall): N/A\n");
-      if (gpu_iteration_timing[2] > 0)
-        printf("\tSpeedup (computation): %.2f\n",
-               cpu_times[0] / gpu_iteration_timing[2]);
-      else
-        printf("\tSpeedup (computation): N/A\n");
-      printf("\t-------------------------------------------------\n");
-      printf("\tTIMINGS\t\tCPU\t\tGPU\n");
-      printf("\tTotal time\t%.2e\t%.2e\n", cpu_times[0], total_gpu_iter_time);
-      if (total_gpu_iter_time > 0) {
-        printf("\tAllocation\t\t\t%.2e (%.2f%%)\n", gpu_iteration_timing[0],
-               100.0f * gpu_iteration_timing[0] / total_gpu_iter_time);
-        printf("\tInitialization\t\t\t%.2e (%.2f%%)\n", gpu_iteration_timing[1],
-               100.0f * gpu_iteration_timing[1] / total_gpu_iter_time);
-        printf("\tComputation\t\t\t%.2e (%.2f%%)\n", gpu_iteration_timing[2],
-               100.0f * gpu_iteration_timing[2] / total_gpu_iter_time);
-        printf("\tTransfer From\t\t\t%.2e (%.2f%%)\n", gpu_iteration_timing[3],
-               100.0f * gpu_iteration_timing[3] / total_gpu_iter_time);
-      } else {
-        printf("\tGPU Timings:\t\t\tAll Zero\n");
-      }
+    printf("    Mismatches:         %d\n", matrix_mismatches);
+    printf("    Maximum difference: %.2e\n\n", matrix_maxdiff);
+  } else if (!timing) {
+    printf("\n    No further information requested\n");
+  }
+
+  if (timing) {
+    float total_gpu_iter_time = 0.0f;
+    for (int i = 0; i < 4; i++) {
+      total_gpu_iter_time += gpu_iteration_timing[i];
     }
-  } else {
-    printf("\tSkipping comparison (CPU run disabled).\n");
+
+    // Print speedup calculations if CPU wasn't skipped
+    if (!cpu) {
+      printf("    Overall speedup:       %.2f\n",
+             cpu_times[0] / total_gpu_iter_time);
+      printf("    Computational speedup: %.2f\n\n",
+             cpu_times[0] / gpu_iteration_timing[2]);
+    } else {
+      printf("    Overall speedup:       N/A\n");
+      printf("    Computational speedup: N/A\n\n");
+    }
+
+    // Print timing table header
+    printf("    Step\t\tCPU\t\tGPU\n");
+    printf("    --------------------------------------------\n");
+
+    // Print total time row
+    if (!cpu) {
+      printf("    Total time\t\t%.2e\t%.2e\n\n", cpu_times[0],
+             total_gpu_iter_time);
+    } else {
+      printf("    Total time\t\tN/A\t\t%.2e\n\n", total_gpu_iter_time);
+    }
+
+    // Print detailed GPU timing steps
+    printf("    Allocation\t\t\t\t%.2e\n", gpu_iteration_timing[0]);
+    printf("    Initialisation\t\t\t%.2e\n", gpu_iteration_timing[1]);
+    printf("    Computation\t\t\t\t%.2e\n", gpu_iteration_timing[2]);
+    printf("    Transfer from\t\t\t%.2e\n", gpu_iteration_timing[3]);
   }
 
   if (average) {
-    printf("\nAVERAGES\n");
+    printf("\n  Results for averaging\n\n");
     if (!cpu) {
       int averages_mismatches =
           mismatches(n, 1, 1, cpu_averages, 1, gpu_averages);
       float averages_maxdiff = maxdiff(n, 1, 1, cpu_averages, 1, gpu_averages);
-      printf("\tMismatches: %d\n", averages_mismatches);
-      printf("\tMaximum difference: %.2e\n", averages_maxdiff);
-      printf("\t-------------------------------------------------\n");
+      printf("    Mismatches:         %d\n", averages_mismatches);
+      printf("    Maximum difference: %.2e\n\n", averages_maxdiff);
+
       float cpu_overall_avg = 0.0f, gpu_overall_avg = 0.0f;
       for (int i = 0; i < n; i++) {
         cpu_overall_avg += cpu_averages[i];
@@ -145,61 +145,62 @@ int main(int argc, char* argv[]) {
       }
       cpu_overall_avg /= (n > 0 ? n : 1);
       gpu_overall_avg /= (n > 0 ? n : 1);
-      printf("\tOverall (CPU): %.2e\n", cpu_overall_avg);
-      printf("\tOverall (GPU): %.2e\n", gpu_overall_avg);
-      if (timing) {
-        printf("\t-------------------------------------------------\n");
-        float total_gpu_avg_time = 0.0f;
-        for (int i = 0; i < 5; i++) {
-          total_gpu_avg_time += gpu_averaging_timing[i];
-        }
-        if (total_gpu_avg_time > 0)
-          printf("\tSpeedup (overall): %.2f\n",
-                 cpu_times[1] / total_gpu_avg_time);
-        else
-          printf("\tSpeedup (overall): N/A\n");
-        if (gpu_averaging_timing[3] > 0)
-          printf("\tSpeedup (computation): %.2f\n",
-                 cpu_times[1] / gpu_averaging_timing[3]);
-        else
-          printf("\tSpeedup (computation): N/A\n");
-        printf("\t-------------------------------------------------\n");
-        printf("\tTIMINGS\t\tCPU\t\tGPU\n");
-        printf("\tTotal time\t%.2e\t%.2e\n", cpu_times[1], total_gpu_avg_time);
-        if (total_gpu_avg_time > 0) {
-          printf("\tSetup\t\t\t\t%.2e (%.2f%%)\n", gpu_averaging_timing[0],
-                 100.0f * gpu_averaging_timing[0] / total_gpu_avg_time);
-          printf("\tAllocation\t\t\t%.2e (%.2f%%)\n", gpu_averaging_timing[1],
-                 100.0f * gpu_averaging_timing[1] / total_gpu_avg_time);
-          printf("\tTransfer to\t\t\t%.2e (%.2f%%)\n", gpu_averaging_timing[2],
-                 100.0f * gpu_averaging_timing[2] / total_gpu_avg_time);
-          printf("\tComputation\t\t\t%.2e (%.2f%%)\n", gpu_averaging_timing[3],
-                 100.0f * gpu_averaging_timing[3] / total_gpu_avg_time);
-          printf("\tTransfer from\t\t\t%.2e (%.2f%%)\n",
-                 gpu_averaging_timing[4],
-                 100.0f * gpu_averaging_timing[4] / total_gpu_avg_time);
-        } else {
-          printf("\tGPU Timings:\t\t\tAll Zero\n");
-        }
+      printf("    Overall (CPU): %.2e\n", cpu_overall_avg);
+      printf("    Overall (GPU): %.2e\n\n", gpu_overall_avg);
+    } else if (!timing) {
+      printf("\n    No further information requested\n");
+    }
+
+    if (timing) {
+      float total_gpu_avg_time = 0.0f;
+      for (int i = 0; i < 5; i++) {
+        total_gpu_avg_time += gpu_averaging_timing[i];
       }
-    } else {
-      printf("\tSkipping comparison (CPU run disabled).\n");
+
+      // Print speedup calculations if CPU wasn't skipped
+      if (!cpu) {
+        printf("    Overall speedup:       %.2f\n",
+               cpu_times[1] / total_gpu_avg_time);
+        printf("    Computational speedup: %.2f\n\n",
+               cpu_times[1] / gpu_averaging_timing[3]);
+      } else {
+        printf("    Overall speedup:       N/A\n");
+        printf("    Computational speedup: N/A\n\n");
+      }
+
+      // Print timing table header
+      printf("    Step\t\tCPU\t\tGPU\n");
+      printf("    --------------------------------------------\n");
+
+      // Print total time row
+      if (!cpu) {
+        printf("    Total time\t\t%.2e\t%.2e\n\n", cpu_times[1],
+               total_gpu_avg_time);
+      } else {
+        printf("    Total time\t\tN/A\t\t%.2e\n\n", total_gpu_avg_time);
+      }
+
+      // Print detailed GPU timing steps
+      printf("    Setup\t\t\t\t%.2e\n", gpu_averaging_timing[0]);
+      printf("    Allocation\t\t\t\t%.2e\n", gpu_averaging_timing[1]);
+      printf("    Transfer to\t\t\t\t%.2e\n", gpu_averaging_timing[2]);
+      printf("    Computation\t\t\t\t%.2e\n", gpu_averaging_timing[3]);
+      printf("    Transfer from\t\t\t%.2e\n", gpu_averaging_timing[4]);
     }
   }
 
   // --- Free Memory ---
-  printf("Freeing memory...\n");
+  printf("\n  Freeing memory...\n");
   free(cpu_matrix);
   free(cpu_averages);
   free(gpu_matrix);
   free(gpu_averages);
   free(temp_matrix);
 
-  // Free the final matrix buffer on the device
   if (device_final_matrix != NULL) {
     cudaFree(device_final_matrix);
   }
 
-  printf("Finished.\n");
+  printf("  Finished\n");
   return EXIT_SUCCESS;
 }

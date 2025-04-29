@@ -87,14 +87,17 @@ extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
     max_elements_in_tile = max(max_elements_in_tile, current_actual_size + 4);
   }
   int sharedMemSize = max_elements_in_tile * sizeof(float);
-  printf("Tile configuration:\t\t%d tiles per row, max %d elements per tile\n",
-         tiles_per_row, max_elements_in_tile);
-  printf("Shared memory per block:\t%d bytes (%.1f KB)\n", sharedMemSize,
-         sharedMemSize / 1024.0f);
+  printf(
+      "\n    Configuration:           %d tiles per row, with a maximum of %d "
+      "elements "
+      "per tile\n",
+      tiles_per_row, max_elements_in_tile);
+  printf("    Shared memory per block: %d bytes (i.e., %.1f kB)\n",
+         sharedMemSize, sharedMemSize / 1024.0f);
   dim3 blockSize(threadsPerBlock);
   dim3 gridSize(n * tiles_per_row);
-  printf("Grid size:\t\t\t%d blocks (%d threads per block)\n", (int) gridSize.x,
-         (int) blockSize.x);
+  printf("    Grid size:               %d blocks, with %d threads per block\n",
+         (int) gridSize.x, (int) blockSize.x);
   float* device_src   = NULL;
   float* device_dst   = NULL;
   float* device_final = NULL;
