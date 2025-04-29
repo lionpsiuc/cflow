@@ -2,6 +2,9 @@
 
 #include <stdio.h>
 
+/**
+ * @brief Explain briefly.
+ */
 #define INIT()                                                                 \
   cudaEvent_t start;                                                           \
   cudaEvent_t end;                                                             \
@@ -9,8 +12,14 @@
   cudaEventCreate(&end);                                                       \
   int index = 0
 
+/**
+ * @brief Explain briefly.
+ */
 #define START() cudaEventRecord(start)
 
+/**
+ * @brief Explain briefly.
+ */
 #define END()                                                                  \
   cudaEventRecord(end);                                                        \
   if (timing != NULL) {                                                        \
@@ -21,6 +30,9 @@
   }                                                                            \
   index++
 
+/**
+ * @brief Explain briefly.
+ */
 #define COMPLETE()                                                             \
   cudaEventDestroy(start);                                                     \
   cudaEventDestroy(end)

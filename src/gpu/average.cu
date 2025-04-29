@@ -2,6 +2,17 @@
 
 #include "../../include/gpu/utils.h"
 
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param increment Explain briefly.
+ * @param input Explain briefly.
+ * @param averages Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 __global__ void average_rows_kernel(const int n, const int m,
                                     const int increment,
                                     const float* __restrict__ input,
@@ -40,6 +51,18 @@ __global__ void average_rows_kernel(const int n, const int m,
   }
 }
 
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param increment Explain briefly.
+ * @param device_input Explain briefly.
+ * @param host_averages Explain briefly.
+ * @param timing Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 extern "C" void average_rows_gpu(const int n, const int m, const int increment,
                                  const float* device_input,
                                  float* host_averages, float* timing) {

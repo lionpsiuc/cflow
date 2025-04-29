@@ -1,7 +1,20 @@
 #include "../../include/gpu/utils.h"
 
+/**
+ * @brief Explain briefly.
+ */
 #define MAX_TILE_SIZE 4096
 
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param increment Explain briefly.
+ * @param grid Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 __global__ void init_gpu(const int n, const int m, const int increment,
                          float* const grid) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -17,6 +30,19 @@ __global__ void init_gpu(const int n, const int m, const int increment,
   grid[i * increment + m + 1] = grid[i * increment + 1];
 }
 
+/**
+ * @brief Explain briefly.
+ *
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param increment Explain briefly.
+ * @param dst Explain briefly.
+ * @param src Explain briefly.
+ * @param tile_size Explain briefly.
+ * @param tiles_per_row Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 __global__ void iteration_gpu_tiled(const int n, const int m,
                                     const int increment, float* const dst,
                                     const float* const src, const int tile_size,
@@ -71,6 +97,18 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
   }
 }
 
+/**
+ * @brief Explain briefly.
+ *
+ * @param iters Explain briefly.
+ * @param n Explain briefly.
+ * @param m Explain briefly.
+ * @param host_grid Explain briefly.
+ * @param timing Explain briefly.
+ * @param device_grid_out Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
                                      float* host_grid, float* timing,
                                      float** device_grid_out) {

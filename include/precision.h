@@ -2,6 +2,9 @@
 
 #include <math.h>
 
+/**
+ * @brief Explain briefly.
+ */
 #ifdef DOUBLE
 typedef double PRECISION;
 #define abs(input) fabs(input)

@@ -1,9 +1,19 @@
+#include <cuda_runtime.h>
+
 #include "../include/cpu/average.h"
 #include "../include/cpu/iteration.h"
 #include "../include/gpu/average.h"
 #include "../include/gpu/iteration.h"
 #include "../include/utils.h"
 
+/**
+ * @brief Explain briefly.
+ *
+ * @param argc Explain briefly.
+ * @param argv Explain briefly.
+ *
+ * @return Explain briefly.
+ */
 int main(int argc, char* argv[]) {
 
   arguments  args      = parse(argc, argv);
@@ -88,9 +98,9 @@ int main(int argc, char* argv[]) {
     float matrix_maxdiff =
         maxdiff(n, m, increment, cpu_matrix, increment, gpu_matrix);
     printf("    Mismatches:         %d\n", matrix_mismatches);
-    printf("    Maximum difference: %.2e\n\n", matrix_maxdiff);
+    printf("    Maximum difference: %.2e\n", matrix_maxdiff);
   } else if (!timing) {
-    printf("\n    No further information requested\n");
+    printf("    No further information requested\n");
   }
 
   if (timing) {
@@ -101,7 +111,7 @@ int main(int argc, char* argv[]) {
 
     // Print speedup calculations if CPU wasn't skipped
     if (!cpu) {
-      printf("    Overall speedup:       %.2f\n",
+      printf("\n    Overall speedup:       %.2f\n",
              cpu_times[0] / total_gpu_iter_time);
       printf("    Computational speedup: %.2f\n\n",
              cpu_times[0] / gpu_iteration_timing[2]);
@@ -136,7 +146,7 @@ int main(int argc, char* argv[]) {
           mismatches(n, 1, 1, cpu_averages, 1, gpu_averages);
       float averages_maxdiff = maxdiff(n, 1, 1, cpu_averages, 1, gpu_averages);
       printf("    Mismatches:         %d\n", averages_mismatches);
-      printf("    Maximum difference: %.2e\n\n", averages_maxdiff);
+      printf("    Maximum difference: %.2e\n", averages_maxdiff);
 
       float cpu_overall_avg = 0.0f, gpu_overall_avg = 0.0f;
       for (int i = 0; i < n; i++) {
@@ -145,10 +155,10 @@ int main(int argc, char* argv[]) {
       }
       cpu_overall_avg /= (n > 0 ? n : 1);
       gpu_overall_avg /= (n > 0 ? n : 1);
-      printf("    Overall (CPU): %.2e\n", cpu_overall_avg);
-      printf("    Overall (GPU): %.2e\n\n", gpu_overall_avg);
+      printf("\n    Average of averages (CPU): %.2e\n", cpu_overall_avg);
+      printf("    Average of averages (GPU): %.2e\n", gpu_overall_avg);
     } else if (!timing) {
-      printf("\n    No further information requested\n");
+      printf("    No further information requested\n");
     }
 
     if (timing) {
@@ -159,7 +169,7 @@ int main(int argc, char* argv[]) {
 
       // Print speedup calculations if CPU wasn't skipped
       if (!cpu) {
-        printf("    Overall speedup:       %.2f\n",
+        printf("\n    Overall speedup:       %.2f\n",
                cpu_times[1] / total_gpu_avg_time);
         printf("    Computational speedup: %.2f\n\n",
                cpu_times[1] / gpu_averaging_timing[3]);
