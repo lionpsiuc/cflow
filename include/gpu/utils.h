@@ -1,21 +1,12 @@
 #pragma once
 
-// #define INIT()                                                                 \
-//   cudaEvent_t start;                                                           \
-//   cudaEvent_t end;                                                             \
-//   cudaEventCreate(&start);                                                     \
-//   cudaEventCreate(&end);                                                       \
-//   int index = 0
+#include <stdio.h>
 
 #define INIT()                                                                 \
   cudaEvent_t start;                                                           \
   cudaEvent_t end;                                                             \
-  int         event_error_flag = 0;                                            \
-  if (cudaEventCreate(&start) != cudaSuccess ||                                \
-      cudaEventCreate(&end) != cudaSuccess) {                                  \
-    event_error_flag = 1;                                                      \
-    fprintf(stderr, "ERROR: Failed to create CUDA events.\n");                 \
-  }                                                                            \
+  cudaEventCreate(&start);                                                     \
+  cudaEventCreate(&end);                                                       \
   int index = 0
 
 #define START() cudaEventRecord(start)
@@ -33,13 +24,3 @@
 #define COMPLETE()                                                             \
   cudaEventDestroy(start);                                                     \
   cudaEventDestroy(end)
-
-#define CUDA_CHECK(call)                                                       \
-  do {                                                                         \
-    cudaError_t err = call;                                                    \
-    if (err != cudaSuccess) {                                                  \
-      fprintf(stderr, "CUDA Error: %s in %s at line %d\n",                     \
-              cudaGetErrorString(err), __FILE__, __LINE__);                    \
-      exit(EXIT_FAILURE);                                                      \
-    }                                                                          \
-  } while (0)

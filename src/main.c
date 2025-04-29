@@ -1,7 +1,3 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "../include/cpu/average.h"
 #include "../include/cpu/iteration.h"
 #include "../include/gpu/average.h"
@@ -68,68 +64,27 @@ int main(int argc, char* argv[]) {
 
   // --- GPU Computations ---
   float* device_final_matrix = NULL;
-  int    gpu_error_status    = 0; // Use int for status
 
   printf("Performing GPU iterations...\n");
   float gpu_iteration_timing[4] = {0.0f};
-  // Call modified GPU iteration function, check int return value
-  gpu_error_status = heat_propagation_gpu(
-      iters, n, m, gpu_matrix, // Pass host buffer for result copy
-      gpu_iteration_timing, &device_final_matrix);
-
-  if (gpu_error_status != 0) { // Check for non-zero (failure)
-    fprintf(stderr, "GPU Iteration failed. Exiting.\n");
-    // Attempt cleanup
-    if (device_final_matrix)
-      CUDA_CHECK(cudaFree(
-          device_final_matrix)); // Still use CUDA_CHECK for free if defined
-    free(cpu_matrix);
-    free(cpu_averages);
-    free(gpu_matrix);
-    free(gpu_averages);
-    free(temp_matrix);
-    CUDA_CHECK(cudaDeviceReset()); // Try to reset device state
-    return EXIT_FAILURE;
-  }
+  // Call modified GPU iteration function
+  heat_propagation_gpu(iters, n, m,
+                       gpu_matrix, // Pass host buffer for result copy
+                       gpu_iteration_timing, &device_final_matrix);
   printf("GPU iterations done.\n");
 
   // GPU Averaging (Optional)
   float gpu_averaging_timing[5] = {0.0f};
   if (average) {
-    if (device_final_matrix == NULL) {
-      fprintf(stderr, "Error: Device matrix pointer is NULL before averaging "
-                      "(GPU iteration likely failed). Exiting.\n");
-      free(cpu_matrix);
-      free(cpu_averages);
-      free(gpu_matrix);
-      free(gpu_averages);
-      free(temp_matrix);
-      CUDA_CHECK(cudaDeviceReset());
-      return EXIT_FAILURE;
-    }
     printf("Performing GPU averaging...\n");
-    // Call modified GPU averaging function, check int return value
-    gpu_error_status =
-        average_rows_gpu(n, m, increment,
-                         device_final_matrix, // Pass device pointer
-                         gpu_averages, gpu_averaging_timing);
-    if (gpu_error_status != 0) { // Check for non-zero (failure)
-      fprintf(stderr, "GPU Averaging failed. Exiting.\n");
-      // Attempt cleanup, including the matrix pointer received from iterations
-      CUDA_CHECK(cudaFree(device_final_matrix));
-      free(cpu_matrix);
-      free(cpu_averages);
-      free(gpu_matrix);
-      free(gpu_averages);
-      free(temp_matrix);
-      CUDA_CHECK(cudaDeviceReset());
-      return EXIT_FAILURE;
-    }
+    // Call modified GPU averaging function
+    average_rows_gpu(n, m, increment,
+                     device_final_matrix, // Pass device pointer
+                     gpu_averages, gpu_averaging_timing);
     printf("GPU averaging done.\n");
   }
 
   // --- Output Comparison and Timing Info ---
-  // (Comparison and timing printing logic remains largely the same)
   printf("\nITERATIONS\n");
   if (!cpu) {
     int matrix_mismatches =
@@ -242,18 +197,8 @@ int main(int argc, char* argv[]) {
 
   // Free the final matrix buffer on the device
   if (device_final_matrix != NULL) {
-    // Use the basic CUDA_CHECK for freeing memory if it's defined and useful
-    // Otherwise, call cudaFree directly and check its return status manually if
-    // needed
-    CUDA_CHECK(cudaFree(device_final_matrix));
-    // cudaError_t free_status = cudaFree(device_final_matrix);
-    // if (free_status != cudaSuccess) {
-    //     fprintf(stderr, "Warning: Failed to free final device matrix.\n");
-    // }
+    cudaFree(device_final_matrix);
   }
-
-  // Optional: Reset device context
-  // CUDA_CHECK(cudaDeviceReset());
 
   printf("Finished.\n");
   return EXIT_SUCCESS;

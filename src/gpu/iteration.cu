@@ -1,6 +1,3 @@
-#include <math.h>
-#include <stdio.h>
-
 #include "../../include/gpu/utils.h"
 
 #define MAX_TILE_SIZE 4096
@@ -74,14 +71,11 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
   }
 }
 
-extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
-                                    float* host_grid, float* timing,
-                                    float** device_grid_out) {
-  const int   increment  = m + 2;
-  int         error_flag = 0;
-  cudaError_t last_error = cudaSuccess;
+extern "C" void heat_propagation_gpu(const int iters, const int n, const int m,
+                                     float* host_grid, float* timing,
+                                     float** device_grid_out) {
+  const int increment = m + 2;
   INIT();
-  error_flag                = event_error_flag;
   int       threadsPerBlock = 256;
   const int tile_size       = MAX_TILE_SIZE;
   const int tiles_per_row   = (m > 0) ? (m + tile_size - 1) / tile_size : 1;
@@ -107,103 +101,35 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
   float* device_temp  = NULL;
   size_t grid_bytes   = n * increment * sizeof(float);
   START();
-  last_error = cudaMalloc((void**) &device_src, grid_bytes);
-  if (last_error != cudaSuccess) {
-    fprintf(stderr, "ERROR: Failed to allocate source memory.\n");
-    error_flag = 1;
-    END();
-    *device_grid_out = NULL;
-    return error_flag;
-  }
-  last_error = cudaMalloc((void**) &device_dst, grid_bytes);
-  if (last_error != cudaSuccess) {
-    fprintf(stderr, "ERROR: Failed to allocate destination memory.\n");
-    cudaFree(device_src);
-    error_flag = 1;
-    END();
-    *device_grid_out = NULL;
-    return error_flag;
-  }
+  cudaMalloc((void**) &device_src, grid_bytes);
+  cudaMalloc((void**) &device_dst, grid_bytes);
   END();
   START();
-  if (!error_flag) {
-    int blocksForInit = (n + threadsPerBlock - 1) / threadsPerBlock;
-    init_gpu<<<blocksForInit, threadsPerBlock>>>(n, m, increment, device_src);
-    last_error = cudaGetLastError();
-    if (last_error != cudaSuccess) {
-      fprintf(stderr, "ERROR: Init kernel launch failed.\n");
-      error_flag = 1;
-    } else {
-      last_error = cudaMemcpy(device_dst, device_src, grid_bytes,
-                              cudaMemcpyDeviceToDevice);
-      if (last_error != cudaSuccess) {
-        fprintf(stderr, "ERROR: Failed copying initial state to dst buffer.\n");
-        error_flag = 1;
-      } else {
-        last_error = cudaDeviceSynchronize();
-        if (last_error != cudaSuccess) {
-          fprintf(stderr, "ERROR: Device sync after init failed.\n");
-          error_flag = 1;
-        }
-      }
-    }
-  }
+  int blocksForInit = (n + threadsPerBlock - 1) / threadsPerBlock;
+  init_gpu<<<blocksForInit, threadsPerBlock>>>(n, m, increment, device_src);
+  cudaMemcpy(device_dst, device_src, grid_bytes, cudaMemcpyDeviceToDevice);
+  cudaDeviceSynchronize();
   END();
   START();
-  if (!error_flag) {
-    float* current_src = device_src;
-    float* current_dst = device_dst;
-    for (int iter = 0; iter < iters; iter++) {
-      iteration_gpu_tiled<<<gridSize, blockSize, sharedMemSize>>>(
-          n, m, increment, current_dst, current_src, tile_size, tiles_per_row);
-      last_error = cudaGetLastError();
-      if (last_error != cudaSuccess) {
-        fprintf(stderr, "ERROR: Iteration kernel launch failed (iter %d).\n",
-                iter);
-        error_flag = 1;
-        break;
-      }
-      float* temp = current_src;
-      current_src = current_dst;
-      current_dst = temp;
-    }
-    if (!error_flag) {
-      last_error = cudaDeviceSynchronize();
-      if (last_error != cudaSuccess) {
-        fprintf(stderr, "ERROR: Device sync after iterations failed.\n");
-        error_flag = 1;
-      }
-    }
-    device_final = current_src;
-    device_temp  = current_dst;
+  float* current_src = device_src;
+  float* current_dst = device_dst;
+  for (int iter = 0; iter < iters; iter++) {
+    iteration_gpu_tiled<<<gridSize, blockSize, sharedMemSize>>>(
+        n, m, increment, current_dst, current_src, tile_size, tiles_per_row);
+    float* temp = current_src;
+    current_src = current_dst;
+    current_dst = temp;
   }
+  cudaDeviceSynchronize();
+  device_final = current_src;
+  device_temp  = current_dst;
   END();
   START();
-  if (!error_flag && host_grid != NULL) {
-    last_error =
-        cudaMemcpy(host_grid, device_final, grid_bytes, cudaMemcpyDeviceToHost);
-    if (last_error != cudaSuccess) {
-      fprintf(stderr, "ERROR: Failed to copy results back to host.\n");
-      error_flag = 1;
-    }
+  if (host_grid != NULL) {
+    cudaMemcpy(host_grid, device_final, grid_bytes, cudaMemcpyDeviceToHost);
   }
   END();
-  if (!error_flag) {
-    *device_grid_out = device_final;
-  } else {
-    *device_grid_out = NULL;
-    if (device_final != NULL) {
-      cudaFree(device_final);
-    }
-  }
-  if (device_temp != NULL) {
-    last_error = cudaFree(device_temp);
-    if (last_error != cudaSuccess) {
-      fprintf(stderr, "WARNING: Failed to free temporary device memory.\n");
-      if (error_flag == 0)
-        error_flag = 1;
-    }
-  }
+  *device_grid_out = device_final;
+  cudaFree(device_temp);
   COMPLETE();
-  return error_flag;
 }

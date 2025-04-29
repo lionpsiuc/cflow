@@ -29,28 +29,8 @@ COMMON_OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(COMMON_SRCS))
 # All object files
 OBJS = $(CPU_OBJS) $(GPU_OBJS) $(COMMON_OBJS)
 
-# Create header wrappers to maintain compatibility with old includes
-HEADER_WRAPPERS = average.h iteration.h average-gpu.h iteration-gpu.h
-
 # Default target
-all: $(HEADER_WRAPPERS) $(TARGET)
-
-# Create header wrappers (backwards compatibility)
-average.h:
-	@echo '#pragma once' > $@
-	@echo '#include "$(INC_DIR)/cpu/average.h"' >> $@
-
-iteration.h:
-	@echo '#pragma once' > $@
-	@echo '#include "$(INC_DIR)/cpu/iteration.h"' >> $@
-
-average-gpu.h:
-	@echo '#pragma once' > $@
-	@echo '#include "$(INC_DIR)/gpu/average.h"' >> $@
-
-iteration-gpu.h:
-	@echo '#pragma once' > $@
-	@echo '#include "$(INC_DIR)/gpu/iteration.h"' >> $@
+all: $(TARGET)
 
 # Linking the target
 $(TARGET): $(OBJS)
@@ -70,6 +50,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 
 # Clean up
 clean:
-	rm -f $(OBJ_DIR)/cpu/*.o $(OBJ_DIR)/gpu/*.o $(OBJ_DIR)/*.o $(TARGET) $(HEADER_WRAPPERS)
+	rm -f $(OBJ_DIR)/cpu/*.o $(OBJ_DIR)/gpu/*.o $(OBJ_DIR)/*.o $(TARGET)
 
 .PHONY: all clean
