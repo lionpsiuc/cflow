@@ -7,90 +7,145 @@
 #include "../include/utils.h"
 
 /**
- * @brief Explain briefly.
+ * @brief Main entry point for the heat propagation simulation application.
  *
- * @param argc Explain briefly.
- * @param argv Explain briefly.
+ * @param argc The number of command-line arguments.
+ * @param argv An array of strings containing the command-line arguments.
  *
- * @return Explain briefly.
+ * @return int Returns EXIT_SUCCESS (i.e., 0) if the programme completes
+ *             successfully, or EXIT_FAILURE (i.e., 1) if an error occurs (e.g.,
+ *             memory allocation failure, invalid arguments, GPU dimension check
+ *             failure).
  */
 int main(int argc, char* argv[]) {
+  arguments args = parse(argc, argv); // Parse command-line options
 
-  arguments  args      = parse(argc, argv);
-  const int  n         = args.n;
-  const int  m         = args.m;
-  const int  increment = m + 2;
-  const int  iters     = args.iters;
-  const bool average   = args.average;
-  const bool cpu       = args.cpu;
-  const bool timing    = args.timing;
+  // Extract parsed arguments
+  const int  n         = args.n;       // Matrix height
+  const int  m         = args.m;       // Matrix width
+  const int  increment = m + 2;        // Row stride (i.e., width and padding)
+  const int  iters     = args.iters;   // Number of iterations
+  const bool average   = args.average; // Flag to perform averaging
+  const bool cpu       = args.cpu;     // Flag to skip CPU computation
+  const bool timing    = args.timing;  // Flag to display timing info
 
   printf("\n  Matrix:    %d x %d (%d iterations)\n", n, m, iters);
   printf("  Precision: FP32\n");
 
-  float* cpu_matrix   = NULL;
-  float* cpu_averages = NULL;
-  float* gpu_matrix   = NULL;
-  float* gpu_averages = NULL;
-  float* temp_matrix  = NULL;
+  // Pointers for host memory buffers
+  float* cpu_matrix   = NULL; // Stores final CPU propagation result
+  float* cpu_averages = NULL; // Stores CPU row averages
+  float* gpu_matrix =
+      NULL; // Stores final GPU propagation result (which is copied back)
+  float* gpu_averages = NULL; // Stores GPU row averages (which is copied back)
+  float* temp_matrix  = NULL; // Temporary buffer for CPU propagation
 
+  // Allocate memory for the main matrices
   cpu_matrix  = calloc(n * increment, sizeof(float));
   gpu_matrix  = calloc(n * increment, sizeof(float));
   temp_matrix = calloc(n * increment, sizeof(float));
 
+  // Allocate memory for average results if requested
   if (average) {
     cpu_averages = calloc(n, sizeof(float));
     gpu_averages = calloc(n, sizeof(float));
   }
 
+  // Check if any host memory allocation failed
   if (cpu_matrix == NULL || gpu_matrix == NULL || temp_matrix == NULL ||
       (average && (cpu_averages == NULL || gpu_averages == NULL))) {
-    fprintf(stderr, "Failed to allocate host memory\n");
+    fprintf(stderr, "  Error: Failed to allocate host memory\n");
+
+    // Free any potentially allocated memory before exiting
     free(cpu_matrix);
     free(cpu_averages);
     free(gpu_matrix);
     free(gpu_averages);
     free(temp_matrix);
+
     return EXIT_FAILURE;
   }
 
-  double start_time       = get_current_time();
+  double start_time       = get_current_time(); // For timing CPU parts
   double cpu_times[2]     = {0.0, 0.0};
   int    cpu_timing_index = 0;
 
+  // Run CPU part unless the -c flag was given
   if (!cpu) {
     printf("\n  Performing CPU iterations...\n");
+    start_time = get_current_time(); // Reset timer before propagation
+
+    // Run CPU propagation
     heat_propagation(iters, n, m, cpu_matrix, temp_matrix);
+
     cpu_times[cpu_timing_index++] = get_duration(&start_time);
     printf("  CPU iterations done\n");
+
+    // Perform CPU averaging if requested
     if (average) {
       printf("\n  Performing CPU averaging...\n");
-      start_time = get_current_time();
+      start_time = get_current_time(); // Reset timer before averaging
+
+      // Run CPU averaging
       average_rows(n, m, increment, cpu_matrix, cpu_averages);
+
       cpu_times[cpu_timing_index++] = get_duration(&start_time);
       printf("  CPU averaging done\n");
     }
   } else {
     printf("\n  Skipping CPU computations\n");
   }
+
+  // Pointer to receive the final result grid location on the device
   float* device_final_matrix = NULL;
 
   printf("\n  Performing GPU iterations...\n");
   float gpu_iteration_timing[4] = {0.0f};
-  heat_propagation_gpu(iters, n, m, gpu_matrix, gpu_iteration_timing,
-                       &device_final_matrix);
-  printf("\n  GPU iterations done\n");
 
+  // Call the GPU propagation function
+  int prop_status = heat_propagation_gpu(
+      iters, n, m, gpu_matrix, gpu_iteration_timing, &device_final_matrix);
+
+  if (prop_status != 0) {
+    fprintf(stderr, "  Error: Exiting due to GPU propagation error\n");
+
+    // Clean allocated host memory before exiting
+    free(cpu_matrix);
+    free(cpu_averages);
+    free(gpu_matrix);
+    free(gpu_averages);
+    free(temp_matrix);
+
+    exit(EXIT_FAILURE);
+  }
+  printf("\n  GPU iterations done\n");
   float gpu_averaging_timing[5] = {0.0f};
+
+  // Perform GPU averaging if requested
   if (average) {
     printf("\n  Performing GPU averaging...\n");
-    // Call modified GPU averaging function
-    average_rows_gpu(n, m, increment,
-                     device_final_matrix, // Pass device pointer
-                     gpu_averages, gpu_averaging_timing);
+
+    // Call GPU averaging function
+    int avg_status = average_rows_gpu(n, m, increment, device_final_matrix,
+                                      gpu_averages, gpu_averaging_timing);
+
+    if (avg_status != 0) {
+      fprintf(stderr, "  Error: Exiting due to GPU averaging error\n");
+      // Clean allocated host memory and the final device matrix
+      free(cpu_matrix);
+      free(cpu_averages);
+      free(gpu_matrix);
+      free(gpu_averages);
+      free(temp_matrix);
+      if (device_final_matrix != NULL)
+        cudaFree(device_final_matrix);
+
+      exit(EXIT_FAILURE);
+    }
     printf("  GPU averaging done\n");
   }
 
+  // Display results for the propagation step
   printf("\n  Results for propagation\n\n");
   if (!cpu) {
     int matrix_mismatches =
@@ -102,7 +157,6 @@ int main(int argc, char* argv[]) {
   } else if (!timing) {
     printf("    No further information requested\n");
   }
-
   if (timing) {
     float total_gpu_iter_time = 0.0f;
     for (int i = 0; i < 4; i++) {
@@ -139,6 +193,7 @@ int main(int argc, char* argv[]) {
     printf("    Transfer from\t\t\t%.2e\n", gpu_iteration_timing[3]);
   }
 
+  // Display results for the averaging step if performed
   if (average) {
     printf("\n  Results for averaging\n\n");
     if (!cpu) {
@@ -160,7 +215,6 @@ int main(int argc, char* argv[]) {
     } else if (!timing) {
       printf("    No further information requested\n");
     }
-
     if (timing) {
       float total_gpu_avg_time = 0.0f;
       for (int i = 0; i < 5; i++) {
@@ -199,18 +253,17 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // --- Free Memory ---
+  // Free memory
   printf("\n  Freeing memory...\n");
   free(cpu_matrix);
   free(cpu_averages);
   free(gpu_matrix);
   free(gpu_averages);
   free(temp_matrix);
-
   if (device_final_matrix != NULL) {
     cudaFree(device_final_matrix);
   }
 
-  printf("  Finished\n");
+  printf("  Finished\n\n");
   return EXIT_SUCCESS;
 }

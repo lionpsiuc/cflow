@@ -100,17 +100,19 @@ extern "C" int average_rows_gpu(const int n, const int m, const int increment,
 
   // Check if dimensions are divisible by block size before proceeding
   if (n % threadsPerBlock != 0) {
-    fprintf(stderr,
-            "Error: Matrix height (i.e., n), which is %d, must be divisible by "
-            "block size, which is %d\n",
-            n, threadsPerBlock);
+    fprintf(
+        stderr,
+        "  Error: Matrix height (i.e., n), which is %d, must be divisible by "
+        "block size, which is %d\n",
+        n, threadsPerBlock);
     return 1; // Indicate failure
   }
   if (m % threadsPerBlock != 0) {
-    fprintf(stderr,
-            "Error: Matrix width (i.e., m), which is %d, must be divisible by "
-            "block size, which is %d\n",
-            m, threadsPerBlock);
+    fprintf(
+        stderr,
+        "  Error: Matrix width (i.e., m), which is %d, must be divisible by "
+        "block size, which is %d\n",
+        m, threadsPerBlock);
     return 1; // Indicate failure
   }
 
