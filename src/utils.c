@@ -1,13 +1,16 @@
 #include "../include/utils.h"
 
 /**
- * @brief Explain briefly.
+ * @brief Parses a command-line argument value associated with a flag.
  *
- * @param flag Explain briefly.
- * @param variable Explain briefly.
- * @param format Explain briefly.
+ * Uses sscanf to parse the global optarg (which is set by getopt) according to
+ * the provided format string and stores the result in variable. Prints an error
+ * message and exits if parsing fails.
  *
- * @return Explain briefly.
+ * @param[in]  flag     The command-line flag character (e.g., a, c, m, n, p,
+ *                      or t).
+ * @param[out] variable Pointer to the variable to store the parsed value.
+ * @param[in]  format   The sscanf format string for parsing (e.g., %d).
  */
 static void parse_argument(const char flag, void* const variable,
                            const char format[]) {
@@ -18,9 +21,12 @@ static void parse_argument(const char flag, void* const variable,
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Provides default values for command-line arguments.
  *
- * @return Explain briefly.
+ * Creates an arguments struct and initialises its fields with predefined
+ * default settings for matrix dimensions, iterations, and flags.
+ *
+ * @return An arguments struct containing the default settings.
  */
 static arguments defaults(void) {
   arguments args;
@@ -34,12 +40,17 @@ static arguments defaults(void) {
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Parses command-line arguments for the application.
  *
- * @param argc Explain briefly.
- * @param argv Explain briefly.
+ * Initialises an arguments struct with defaults, then uses getopt to parse
+ * command-line flags (e.g., -a, -c, -m, -n, -p, or -t). It calls parse_argument
+ * for flags requiring values. Performs basic validation (e.g., positive
+ * dimensions, non-negative iterations).
  *
- * @return Explain briefly.
+ * @param[in] argc The argument count passed to main.
+ * @param[in] argv The argument vector passed to main.
+ *
+ * @return An arguments struct populated with parsed or default values.
  */
 arguments parse(const int argc, char* const argv[]) {
   arguments args = defaults(); // Start with the default arguments
@@ -77,9 +88,11 @@ arguments parse(const int argc, char* const argv[]) {
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Gets the current high-resolution monotonic time.
  *
- * @return Explain briefly.
+ * Uses clock_gettime with CLOCK_MONOTONIC to retrieve the current time.
+ *
+ * @return The current time in seconds, as a double-precision float.
  */
 double get_current_time(void) {
   struct timespec current_time;
@@ -88,11 +101,16 @@ double get_current_time(void) {
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Calculates elapsed time and updates the start time.
  *
- * @param time Explain briefly.
+ * Gets the current time, calculates the difference between the current time and
+ * the time pointed to by the input time pointer, updates the value pointed to
+ * by time to the current time, and returns the difference.
  *
- * @return Explain briefly.
+ * @param[in,out] time Pointer to a double storing a previous time value; this
+ *                     value is updated to the current time upon exit.
+ *
+ * @return The elapsed time duration in seconds.
  */
 double get_duration(double* const time) {
   const double now  = get_current_time();
@@ -102,14 +120,17 @@ double get_duration(double* const time) {
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Prints a matrix to standard output.
  *
- * @param n Explain briefly.
- * @param m Explain briefly.
- * @param increment Explain briefly.
- * @param dst Explain briefly.
+ * Iterates through the specified rows and columns of the matrix data pointed to
+ * by dst and prints each element formatted to six decimal places. Uses
+ * increment to correctly calculate the position of elements in padded rows.
  *
- * @return Explain briefly.
+ * @param[in] n         The number of rows to print.
+ * @param[in] m         The number of columns to print per row.
+ * @param[in] increment The distance (i.e., number of elements) between starts
+ *                      of rows.
+ * @param[in] dst       Pointer to the matrix data to be printed.
  */
 void print_matrix(const int n, const int m, const int increment,
                   float* const dst) {
@@ -122,16 +143,20 @@ void print_matrix(const int n, const int m, const int increment,
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Counts mismatches between two matrices within a tolerance.
  *
- * @param n Explain briefly.
- * @param m Explain briefly.
- * @param incrementA Explain briefly.
- * @param A Explain briefly.
- * @param incrementB Explain briefly.
- * @param B Explain briefly.
+ * Compares corresponding elements of matrices A and B. If the absolute
+ * difference between an element pair is greater than or equal to a predefined
+ * tolerance, it increments a counter.
  *
- * @return Explain briefly.
+ * @param[in] n          The number of rows to compare.
+ * @param[in] m          The number of columns to compare per row.
+ * @param[in] incrementA The row increment (i.e., stride) for matrix A.
+ * @param[in] A          Pointer to the first matrix data.
+ * @param[in] incrementB The row increment (i.e., stride) for matrix B.
+ * @param[in] B          Pointer to the second matrix data.
+ *
+ * @return The total number of element pairs whose difference exceeds tolerance.
  */
 int mismatches(const int n, const int m, const int incrementA,
                const float* const A, const int incrementB,
@@ -149,16 +174,19 @@ int mismatches(const int n, const int m, const int incrementA,
 }
 
 /**
- * @brief Explain briefly.
+ * @brief Finds the maximum absolute difference between two matrices.
  *
- * @param n Explain briefly.
- * @param m Explain briefly.
- * @param incrementA Explain briefly.
- * @param A Explain briefly.
- * @param incrementB Explain briefly.
- * @param B Explain briefly.
+ * Compares corresponding elements of matrices A and B and returns the largest
+ * absolute difference found between any element pair.
  *
- * @return Explain briefly.
+ * @param[in] n          The number of rows to compare.
+ * @param[in] m          The number of columns to compare per row.
+ * @param[in] incrementA The row increment (i.e., stride) for matrix A.
+ * @param[in] A          Pointer to the first matrix data.
+ * @param[in] incrementB The row increment (i.e., stride) for matrix B.
+ * @param[in] B          Pointer to the second matrix data.
+ *
+ * @return The maximum absolute difference found between corresponding elements.
  */
 float maxdiff(const int n, const int m, const int incrementA,
               const float* const A, const int incrementB,
