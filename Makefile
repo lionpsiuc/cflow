@@ -16,7 +16,7 @@ TARGET = main
 
 # Source files
 CPU_SRCS    = $(SRC_DIR)/cpu/average.c $(SRC_DIR)/cpu/iteration.c
-GPU_SRCS    = $(SRC_DIR)/gpu/average.cu $(SRC_DIR)/gpu/iteration.cu
+GPU_SRCS    = $(SRC_DIR)/gpu/average.cu $(SRC_DIR)/gpu/iteration.cu $(SRC_DIR)/gpu/utils.cu
 COMMON_SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/utils.c
 
 # Object files

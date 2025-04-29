@@ -1,9 +1,8 @@
-#include <cuda_runtime.h>
-
 #include "../include/cpu/average.h"
 #include "../include/cpu/iteration.h"
 #include "../include/gpu/average.h"
 #include "../include/gpu/iteration.h"
+#include "../include/gpu/utils.h"
 #include "../include/utils.h"
 
 /**
@@ -137,8 +136,7 @@ int main(int argc, char* argv[]) {
       free(gpu_matrix);
       free(gpu_averages);
       free(temp_matrix);
-      if (device_final_matrix != NULL)
-        cudaFree(device_final_matrix);
+      freedeviceptr(device_final_matrix);
 
       exit(EXIT_FAILURE);
     }
@@ -260,9 +258,7 @@ int main(int argc, char* argv[]) {
   free(gpu_matrix);
   free(gpu_averages);
   free(temp_matrix);
-  if (device_final_matrix != NULL) {
-    cudaFree(device_final_matrix);
-  }
+  freedeviceptr(device_final_matrix);
 
   printf("  Finished\n\n");
   return EXIT_SUCCESS;
