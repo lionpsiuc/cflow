@@ -316,10 +316,6 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
   for (int iter = 0; iter < iters; iter++) {
     iteration_gpu_tiled<<<gridSize, blockSize, sharedMemSize>>>(
         n, m, increment, current_dst, current_src, tile_size, tiles_per_row);
-    // Check for kernel errors (optional, but useful for debugging).
-    // cudaError_t err = cudaGetLastError();
-    // if (err != cudaSuccess) printf("Kernel launch error: %s\n",
-    // cudaGetErrorString(err));
 
     // Swap the roles of src and dst pointers for the next iteration.
     float* temp = current_src;

@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
       iters, n, m, gpu_matrix, gpu_iteration_timing, &device_final_matrix);
 
   if (prop_status != 0) {
-    fprintf(stderr, "  Error: Exiting due to GPU propagation error\n");
+    fprintf(stderr, "  Error: Exiting due to GPU propagation error\n\n");
 
     // Clean allocated host memory before exiting
     free(cpu_matrix);
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
                                       gpu_averages, gpu_averaging_timing);
 
     if (avg_status != 0) {
-      fprintf(stderr, "  Error: Exiting due to GPU averaging error\n");
+      fprintf(stderr, "  Error: Exiting due to GPU averaging error\n\n");
       // Clean allocated host memory and the final device matrix
       free(cpu_matrix);
       free(cpu_averages);
