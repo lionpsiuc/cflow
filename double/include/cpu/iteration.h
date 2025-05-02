@@ -18,4 +18,4 @@
  * @param[in,out] src   Pointer to the other buffer for the matrix data.
  */
 void heat_propagation(const int iters, const int n, const int m,
-                      float* restrict dst, float* restrict src);
+                      double* restrict dst, double* restrict src);

@@ -21,11 +21,11 @@
  * @return int Returns 0, indicating success.
  */
 int average_rows(const int n, const int m, const int increment,
-                 const float* const dst, float* const averages) {
+                 const double* const dst, double* const averages) {
 
   // Initialise averages to zero
   for (int i = 0; i < n; i++) {
-    averages[i] = 0.0f;
+    averages[i] = 0.0;
   }
 
   // Calculate sum for each row

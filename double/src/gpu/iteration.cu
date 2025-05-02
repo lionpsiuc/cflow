@@ -24,21 +24,21 @@
  *                       initialised.
  */
 __global__ void init_gpu(const int n, const int m, const int increment,
-                         float* const grid) {
+                         double* const grid) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i >= n) // Ensure the calculated row index is within the matrix height
     return;
 
   // Calculate the value for the first column (i.e., j = 0)
-  float col0 = 0.98f * (float) ((i + 1) * (i + 1)) / (float) (n * n);
+  double col0 = 0.98 * (double) ((i + 1) * (i + 1)) / (double) (n * n);
 
   grid[i * increment + 0] = col0; // Write to global memory
 
   // Calculate values for the interior columns (i.e., j = 1 to m - 1)
   for (int j = 1; j < m; j++) {
     grid[i * increment + j] =
-        col0 *
-        ((float) (m - j) * (m - j) / (float) (m * m)); // Write to global memory
+        col0 * ((double) (m - j) * (m - j) /
+                (double) (m * m)); // Write to global memory
   }
 
   // Set the padded columns at the end of the row for wrap-around boundary
@@ -74,9 +74,10 @@ __global__ void init_gpu(const int n, const int m, const int increment,
  * @param[in]  tiles_per_row The number of tiles needed to cover the width m.
  */
 __global__ void iteration_gpu_tiled(const int n, const int m,
-                                    const int increment, float* const dst,
-                                    const float* const src, const int tile_size,
-                                    const int tiles_per_row) {
+                                    const int increment, double* const dst,
+                                    const double* const src,
+                                    const int           tile_size,
+                                    const int           tiles_per_row) {
   int row_idx =
       blockIdx.x /
       tiles_per_row; // Calculate the row index this block is responsible for
@@ -100,7 +101,7 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
 
   // Declare shared memory; size is determined dynamically at launch based on
   // max_elements_in_tile
-  extern __shared__ float sh_mem[];
+  extern __shared__ double sh_mem[];
 
   // Load data from global to shared memory
   for (int i = threadIdx.x; i < actual_tile_size + 4; i += blockDim.x) {
@@ -141,11 +142,11 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
     // element; '+ 2' because shared memory includes the left halo
     int sh_idx = i + 2;
 
-    float result =
-        ((1.60f * sh_mem[sh_idx - 2]) + (1.55f * sh_mem[sh_idx - 1]) +
-         sh_mem[sh_idx] + (0.60f * sh_mem[sh_idx + 1]) +
-         (0.25f * sh_mem[sh_idx + 2])) /
-        5.0f; // Apply the five-point stencil using values from shared memory
+    double result =
+        ((1.60 * sh_mem[sh_idx - 2]) + (1.55 * sh_mem[sh_idx - 1]) +
+         sh_mem[sh_idx] + (0.60 * sh_mem[sh_idx + 1]) +
+         (0.25 * sh_mem[sh_idx + 2])) /
+        5.0; // Apply the five-point stencil using values from shared memory
     dst[row_offset + global_col] = result; // Write the computed result to the
                                            // destination grid in global memory
   }
@@ -201,8 +202,8 @@ __global__ void iteration_gpu_tiled(const int n, const int m,
  * @return int Returns 0 on success, non-zero if dimension checks fail.
  */
 extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
-                                    float* host_grid, float* timing,
-                                    float** device_grid_out) {
+                                    double* host_grid, float* timing,
+                                    double** device_grid_out) {
 
   // Calculate the increment (i.e., stride) between rows, including padding
   const int increment = m + 2;
@@ -251,7 +252,7 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
   }
 
   // Calculate the required shared memory size in bytes
-  int sharedMemSize = max_elements_in_tile * sizeof(float);
+  int sharedMemSize = max_elements_in_tile * sizeof(double);
 
   // Define kernel launch parameters
   dim3 blockSize(threadsPerBlock); // Block dimension
@@ -265,18 +266,18 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
       "per tile\n",
       tiles_per_row, max_elements_in_tile);
   printf("    Shared memory per block: %d bytes (i.e., %.1f kB)\n",
-         sharedMemSize, sharedMemSize / 1024.0f);
+         sharedMemSize, sharedMemSize / 1024.0);
   printf("    Grid size:               %d blocks, with %d threads per block\n",
          (int) gridSize.x, (int) blockSize.x);
 
   // Pointers for device memory grids
-  float* device_src   = NULL; // Source grid for an iteration
-  float* device_dst   = NULL; // Destination grid for an iteration
-  float* device_final = NULL; // Points to the grid holding the final result
-  float* device_temp  = NULL; // Temporary pointer used for cleanup
+  double* device_src   = NULL; // Source grid for an iteration
+  double* device_dst   = NULL; // Destination grid for an iteration
+  double* device_final = NULL; // Points to the grid holding the final result
+  double* device_temp  = NULL; // Temporary pointer used for cleanup
 
   // Calculate total bytes needed for one grid
-  size_t grid_bytes = n * increment * sizeof(float);
+  size_t grid_bytes = n * increment * sizeof(double);
 
   // Start timing for allocation
   START();
@@ -309,8 +310,8 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
   START();
 
   // Set up pointers for ping-pong buffering
-  float* current_src = device_src;
-  float* current_dst = device_dst;
+  double* current_src = device_src;
+  double* current_dst = device_dst;
 
   // Perform the main iteration loop
   for (int iter = 0; iter < iters; iter++) {
@@ -318,9 +319,9 @@ extern "C" int heat_propagation_gpu(const int iters, const int n, const int m,
         n, m, increment, current_dst, current_src, tile_size, tiles_per_row);
 
     // Swap the roles of src and dst pointers for the next iteration.
-    float* temp = current_src;
-    current_src = current_dst;
-    current_dst = temp;
+    double* temp = current_src;
+    current_src  = current_dst;
+    current_dst  = temp;
   }
 
   cudaDeviceSynchronize();    // Wait for all iterations to complete

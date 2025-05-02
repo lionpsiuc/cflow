@@ -31,25 +31,25 @@ int main(int argc, char* argv[]) {
   const bool timing    = args.timing;  // Flag to display timing info
 
   printf("\n  Matrix:    %d x %d (%d iterations)\n", n, m, iters);
-  printf("  Precision: FP32\n");
+  printf("  Precision: FP64\n");
 
   // Pointers for host memory buffers
-  float* cpu_matrix   = NULL; // Stores final CPU propagation result
-  float* cpu_averages = NULL; // Stores CPU row averages
-  float* gpu_matrix =
+  double* cpu_matrix   = NULL; // Stores final CPU propagation result
+  double* cpu_averages = NULL; // Stores CPU row averages
+  double* gpu_matrix =
       NULL; // Stores final GPU propagation result (which is copied back)
-  float* gpu_averages = NULL; // Stores GPU row averages (which is copied back)
-  float* temp_matrix  = NULL; // Temporary buffer for CPU propagation
+  double* gpu_averages = NULL; // Stores GPU row averages (which is copied back)
+  double* temp_matrix  = NULL; // Temporary buffer for CPU propagation
 
   // Allocate memory for the main matrices
-  cpu_matrix  = calloc(n * increment, sizeof(float));
-  gpu_matrix  = calloc(n * increment, sizeof(float));
-  temp_matrix = calloc(n * increment, sizeof(float));
+  cpu_matrix  = calloc(n * increment, sizeof(double));
+  gpu_matrix  = calloc(n * increment, sizeof(double));
+  temp_matrix = calloc(n * increment, sizeof(double));
 
   // Allocate memory for average results if requested
   if (average) {
-    cpu_averages = calloc(n, sizeof(float));
-    gpu_averages = calloc(n, sizeof(float));
+    cpu_averages = calloc(n, sizeof(double));
+    gpu_averages = calloc(n, sizeof(double));
   }
 
   // Check if any host memory allocation failed
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Pointer to receive the final result grid location on the device
-  float* device_final_matrix = NULL;
+  double* device_final_matrix = NULL;
 
   printf("\n  Performing GPU iterations...\n");
   float gpu_iteration_timing[4] = {0.0f};
@@ -147,10 +147,10 @@ int main(int argc, char* argv[]) {
   }
 
   // Calculating precision
-  float matrix_mismatches   = NAN;
-  float matrix_maxdiff      = NAN;
-  float averages_mismatches = NAN;
-  float averages_maxdiff    = NAN;
+  float  matrix_mismatches   = NAN;
+  double matrix_maxdiff      = NAN;
+  float  averages_mismatches = NAN;
+  double averages_maxdiff    = NAN;
   if (!cpu) {
     matrix_mismatches =
         mismatches(n, m, increment, cpu_matrix, increment, gpu_matrix);
@@ -223,7 +223,7 @@ int main(int argc, char* argv[]) {
     if (!cpu) {
       printf("    Mismatches:         %d\n", (int) averages_mismatches);
       printf("    Maximum difference: %.2e\n", averages_maxdiff);
-      float cpu_overall_avg = 0.0f, gpu_overall_avg = 0.0f;
+      double cpu_overall_avg = 0.0, gpu_overall_avg = 0.0;
       for (int i = 0; i < n; i++) {
         if (!isnan(cpu_averages[i])) {
           cpu_overall_avg += cpu_averages[i];
@@ -305,7 +305,7 @@ int main(int argc, char* argv[]) {
     int block_size = 256; // Hardcoded based on GPU kernel implementation
 
     // Propagation results
-    float p_max_diff = !cpu ? matrix_maxdiff : NAN;
+    double p_max_diff = !cpu ? matrix_maxdiff : NAN;
 
     // Ensure denominator is not zero or NAN before calculating speedup
     float p_speedup =
@@ -318,7 +318,7 @@ int main(int argc, char* argv[]) {
     float  p_gpu_time = gpu_iteration_timing[2];
 
     // Averaging results
-    float a_max_diff = (!cpu && average) ? averages_maxdiff : NAN;
+    double a_max_diff = (!cpu && average) ? averages_maxdiff : NAN;
 
     // Ensure denominator is not zero or NAN before calculating speedup
     float a_speedup =

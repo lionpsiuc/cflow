@@ -21,25 +21,25 @@
  */
 __global__ void average_rows_kernel(const int n, const int m,
                                     const int increment,
-                                    const float* __restrict__ input,
-                                    float* __restrict__ averages) {
+                                    const double* __restrict__ input,
+                                    double* __restrict__ averages) {
   const int row = blockIdx.x; // Map block index directly to the row index
 
   // Ensure the block index is within the valid number of rows
   if (row >= n)
     return; // Block does no work if its index is out of bounds
 
-  const float* row_start =
+  const double* row_start =
       input + row * increment; // Calculate the starting address of the assigned
                                // row in global memory
 
   // Use shared memory for the reduction; the size is determined by
-  // threadsPerBlock * sizeof(float) during launch
-  extern __shared__ float sdata[];
+  // threadsPerBlock * sizeof(double) during launch
+  extern __shared__ double sdata[];
   const int tid = threadIdx.x; // Get the thread index within the block
 
   // Each thread calculates partial sum for its elements
-  float thread_sum = 0.0f;
+  double thread_sum = 0.0;
   for (int j = tid; j < m; j += blockDim.x) {
     thread_sum += row_start[j]; // Accumulate values from global memory
   }
@@ -65,7 +65,7 @@ __global__ void average_rows_kernel(const int n, const int m,
   // Thread 0 of the block now holds the total sum for the row in sdata[0]; it
   // calculates the average and writes it to the global memory output array
   if (tid == 0) {
-    averages[row] = sdata[0] / (float) m;
+    averages[row] = sdata[0] / (double) m;
   }
 }
 
@@ -91,8 +91,8 @@ __global__ void average_rows_kernel(const int n, const int m,
  * @return int Returns 0 on success, non-zero if dimension checks fail.
  */
 extern "C" int average_rows_gpu(const int n, const int m, const int increment,
-                                const float* device_input, float* host_averages,
-                                float* timing) {
+                                const double* device_input,
+                                double* host_averages, float* timing) {
 
   // Define the block size for the kernel; this kernel uses one block per row,
   // so block size mainly affects the reduction performance
@@ -124,20 +124,20 @@ extern "C" int average_rows_gpu(const int n, const int m, const int increment,
   int numBlocks = n; // Launch one block for each row
 
   // Calculate the required shared memory size per block for the reduction
-  int sharedMemSize = threadsPerBlock * sizeof(float);
+  int sharedMemSize = threadsPerBlock * sizeof(double);
 
   END(); // Stop timing for setup (i.e., timing[0])
 
   // Start timing for allocation
   START();
 
-  float* device_averages = NULL; // Pointer for device memory to store results
+  double* device_averages = NULL; // Pointer for device memory to store results
 
   // Allocate memory on the GPU for the output averages array
-  cudaMalloc((void**) &device_averages, n * sizeof(float));
+  cudaMalloc((void**) &device_averages, n * sizeof(double));
 
   // Initialise the allocated device memory to zeros to ensure clean results
-  cudaMemset(device_averages, 0, n * sizeof(float));
+  cudaMemset(device_averages, 0, n * sizeof(double));
 
   END(); // Stop timing for allocation (i.e., timing[1])
 
@@ -164,7 +164,7 @@ extern "C" int average_rows_gpu(const int n, const int m, const int increment,
 
   // Copy the results from the device memory (i.e., device_averages) back to the
   // host memory (i.e., host_averages)
-  cudaMemcpy(host_averages, device_averages, n * sizeof(float),
+  cudaMemcpy(host_averages, device_averages, n * sizeof(double),
              cudaMemcpyDeviceToHost);
 
   END(); // Stop timing for device-to-host transfer (i.e., timing[4])

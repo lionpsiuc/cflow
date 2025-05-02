@@ -134,7 +134,7 @@ double get_duration(double* const time) {
  * @param[in] dst       Pointer to the matrix data to be printed.
  */
 void print_matrix(const int n, const int m, const int increment,
-                  float* const dst) {
+                  double* const dst) {
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
       printf("%8.6f   ", dst[i * increment + j]);
@@ -161,13 +161,13 @@ void print_matrix(const int n, const int m, const int increment,
  *             tolerance.
  */
 int mismatches(const int n, const int m, const int incrementA,
-               const float* const A, const int incrementB,
-               const float* const B) {
-  int         count = 0;
-  const float tol   = 1e-4f;
+               const double* const A, const int incrementB,
+               const double* const B) {
+  int          count = 0;
+  const double tol   = 1e-4;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      if (fabsf(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
+      if (fabs(A[i * incrementA + j] - B[i * incrementB + j]) >= tol) {
         count++;
       }
     }
@@ -188,17 +188,17 @@ int mismatches(const int n, const int m, const int incrementA,
  * @param[in] incrementB The row increment (i.e., stride) for matrix B.
  * @param[in] B          Pointer to the second matrix data.
  *
- * @return float The maximum absolute difference found between corresponding
- *               elements.
+ * @return double The maximum absolute difference found between corresponding
+ *                elements.
  */
-float maxdiff(const int n, const int m, const int incrementA,
-              const float* const A, const int incrementB,
-              const float* const B) {
-  float maxdiff  = 0;
-  float currdiff = 0;
+double maxdiff(const int n, const int m, const int incrementA,
+               const double* const A, const int incrementB,
+               const double* const B) {
+  double maxdiff  = 0;
+  double currdiff = 0;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
-      currdiff = fabsf(A[i * incrementA + j] - B[i * incrementB + j]);
+      currdiff = fabs(A[i * incrementA + j] - B[i * incrementB + j]);
       if (currdiff > maxdiff) {
         maxdiff = currdiff;
       }

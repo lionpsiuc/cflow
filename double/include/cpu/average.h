@@ -23,4 +23,4 @@
  * @return int Returns 0, indicating success.
  */
 int average_rows(const int n, const int m, const int increment,
-                 const float* const dst, float* const averages);
+                 const double* const dst, double* const averages);

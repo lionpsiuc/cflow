@@ -33,8 +33,8 @@ extern "C" {
  * @return int Returns 0 on success, non-zero if dimension checks fail.
  */
 int heat_propagation_gpu(const int iters, const int n, const int m,
-                         float* host_grid, float* timing,
-                         float** device_grid_out);
+                         double* host_grid, float* timing,
+                         double** device_grid_out);
 
 #ifdef __cplusplus
 }

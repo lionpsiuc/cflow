@@ -82,7 +82,7 @@ double get_duration(double* const time);
  * @param[in] dst       Pointer to the matrix data to be printed.
  */
 void print_matrix(const int n, const int m, const int increment,
-                  float* const dst);
+                  double* const dst);
 
 /**
  * @brief Counts mismatches between two matrices within a tolerance.
@@ -102,8 +102,8 @@ void print_matrix(const int n, const int m, const int increment,
  *             tolerance.
  */
 int mismatches(const int n, const int m, const int incrementA,
-               const float* const A, const int incrementB,
-               const float* const B);
+               const double* const A, const int incrementB,
+               const double* const B);
 
 /**
  * @brief Finds the maximum absolute difference between two matrices.
@@ -118,8 +118,9 @@ int mismatches(const int n, const int m, const int incrementA,
  * @param[in] incrementB The row increment (i.e., stride) for matrix B.
  * @param[in] B          Pointer to the second matrix data.
  *
- * @return float The maximum absolute difference found between corresponding
- *               elements.
+ * @return double The maximum absolute difference found between corresponding
+ *                elements.
  */
-float maxdiff(const int n, const int m, const int incrementA,
-              const float* const A, const int incrementB, const float* const B);
+double maxdiff(const int n, const int m, const int incrementA,
+               const double* const A, const int incrementB,
+               const double* const B);

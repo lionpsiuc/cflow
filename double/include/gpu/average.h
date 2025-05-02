@@ -26,7 +26,7 @@ extern "C" {
  * @return int Returns 0 on success, non-zero if dimension checks fail.
  */
 int average_rows_gpu(const int n, const int m, const int increment,
-                     const float* device_input, float* host_averages,
+                     const double* device_input, double* host_averages,
                      float* timing);
 
 #ifdef __cplusplus
