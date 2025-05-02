@@ -273,6 +273,8 @@ Speedups reach values between ~15x and ~25x for single-precision and ~13x to ~20
 
 The gap between CPU and GPU times is even more pronounced here than for propagation, especially at larger sizes. The GPU averaging kernel uses an efficient parallel reduction within shared memory.
 
+As per the assignment instructions, we compare this kernel implementation with our previous one in the first assignment. For a matrix size of 15360 x 15360, the best time is approximately 0.00286 seconds, using a block size of 512. In comparison, for a matrix size of 10000 x 10000, the best time is approximately 0.1123 seconds, using 16 threads per block; for a matrix size of 25000 x 25000, this increases to approximately 1.1369 seconds, using four blocks per thread. Please note that we added the gpu_row_time and gpu_reduce_row_time together from results-task3.csv in order to more accurately compare the two implementations. Clearly, the shared memory implementation is much quicker and efficient. It must be noted, however, that the times from the previous assignment include GPU memory allocation and data initialization alongside kernel execution, while this assignment's times focus on kernel execution time. I believe that the inclusion of these setup times does not unfairly skew the comparison given that the time difference observed is order of magnitude larger.
+
 ### Computational Speedup vs. Matrix Size (Averaging)
 
 <p float="left">
