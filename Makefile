@@ -10,7 +10,7 @@ $(shell mkdir -p $(OBJ_DIR)/cpu $(OBJ_DIR)/gpu)
 
 # Compiler flags
 CFLAGS  = -funroll-loops -I$(INC_DIR) -I. -march=native -O3 -std=c2x -Wall -Wextra
-NVFLAGS = -arch=sm_86 -O3 -I$(INC_DIR) -I. --use_fast_math
+NVFLAGS = -arch=sm_75 -O3 -I$(INC_DIR) -I. --use_fast_math
 
 TARGET = main
 
