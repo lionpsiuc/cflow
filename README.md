@@ -1,6 +1,19 @@
-# cflow: A CUDA-Accelerated Cylindrical Radiator Finite Differences Implementation
+# cflow: A CUDA-Accelerated Cylindrical Radiator Finite Differences Implementation <!-- omit from toc -->
 
 This document outlines the structure, compilation, execution, and implementation details for the cylindrical radiator heat propagation simulation.
+
+- [Folder Structure](#folder-structure)
+- [How to Compile and Run](#how-to-compile-and-run)
+- [CUDA Code Explanation](#cuda-code-explanation)
+  - [Propagation Kernel](#propagation-kernel)
+  - [Averaging Kernel](#averaging-kernel)
+- [Timing Explanations](#timing-explanations)
+- [Figure Explanations](#figure-explanations)
+  - [CPU and GPU Computation Time vs. Matrix Size (Propagation)](#cpu-and-gpu-computation-time-vs-matrix-size-propagation)
+  - [Computational Speedup vs. Matrix Size (Propagation)](#computational-speedup-vs-matrix-size-propagation)
+  - [CPU and GPU Computation Time vs. Matrix Size (Averaging)](#cpu-and-gpu-computation-time-vs-matrix-size-averaging)
+  - [Computational Speedup vs. Matrix Size (Averaging)](#computational-speedup-vs-matrix-size-averaging)
+  - [Maximum Differences between CPU and GPU vs. Matrix Size](#maximum-differences-between-cpu-and-gpu-vs-matrix-size)
 
 ## Folder Structure
 
@@ -78,6 +91,7 @@ cflow/
 ├── Makefile                          // To build single-precision case
 ├── plot.py
 ├── README.md
+├── requirements.txt
 └── timings.txt
 ```
 
@@ -99,6 +113,11 @@ A more detailed description of top-level files and folders follows:
    - A C/C++ compiler (e.g., GCC or G++).
    - NVIDIA CUDA Toolkit (including NVCC) installed.
    - Ensure PATH and LD_LIBRARY_PATH environment variables are correctly set for NVCC.
+   - Python packages as given in requirements.txt. Can be installed by running (within the root directory):
+
+      ```bash
+      pip install -r requirements.txt
+      ```
 
 2.  **Compile**:
 
@@ -186,7 +205,7 @@ The row averaging logic is implemented in a separate kernel, average_rows_kernel
   - Similar dimension divisibility checks (n % threadsPerBlock and m % threadsPerBlock) are performed in the host code.
   - The grid dimension (numBlocks) is simply n, launching one block per row.
 
-## Timing Explanation
+## Timing Explanations
 
 Timing for various stages of the CPU and GPU computations is performed to allow for performance analysis and speedup calculation.
 
@@ -217,11 +236,61 @@ Timing for various stages of the CPU and GPU computations is performed to allow 
   - The elapsed time is retrieved using cudaEventElapsedTime (which returns milliseconds) and converted to seconds. cudaEventSynchronize is used before reading the time to ensure operations are complete.
   - These timings are reported if the -t flag is used and also written to the timings.txt file for plotting (regardless of whether -t is specified or not).
 
-## Figure Explanation
+## Figure Explanations
 
-The plot.py scripts (one for single-precision and one for double-precision in the double/ directory) read the corresponding timings.txt file and generate several plots visualizing performance. The timings.txt file contains columns for n, m, p, block_size, max differences (i.e., precision), speedups, and CPU/GPU times for both propagation and averaging steps.
+The plot.py scripts (one for single-precision and one for double-precision in the double/ directory) read the corresponding timings.txt file and generate several plots visualizing performance. The timings.txt file contains columns for n, m, p, block_size, max differences (i.e., precision), speedups, and CPU/GPU times for both propagation and averaging steps. Please note that for timing and speedup calculations, we use the computation times as opposed to total time (which includes allocation, initialisation, and transfer times). For total times, please refer to [How to Compile and Run](#how-to-compile-and-run) for an explanation on how to run for a specified time which will output the required times.
+
+### CPU and GPU Computation Time vs. Matrix Size (Propagation)
 
 <p float="left">
-  <img src="figs/prop-times-vs-size.png" width="50%" />
-  <img src="double/figs/prop-times-vs-size.png" width="50%" />
+  <img src="figs/prop-times-vs-size.png" width="49%" />
+  <img src="double/figs/prop-times-vs-size.png" width="49%" />
 </p>
+
+*The left and right images are for the single- and double-precision case, respectively*.
+
+As we can see from the above, different GPU block sizes (128, 256, 512) show similar performance trends, with minor variations. Double-precision times are slightly higher than single-precision times (which is to be expected) for both CPU and GPU, but the overall trend and GPU advantage remain the same. The relatively slow increase in GPU time suggests the implementation scales well. Larger problems provide more work to hide memory latency and keep the GPU cores busy. The similar performance across tested block sizes (128, 256, 512) suggests that these sizes are all reasonably effective at utilizing the GPU resources.
+
+### Computational Speedup vs. Matrix Size (Propagation)
+
+<p float="left">
+  <img src="figs/prop-speedup-vs-size.png" width="49%" />
+  <img src="double/figs/prop-speedup-vs-size.png" width="49%" />
+</p>
+
+*The left and right images are for the single- and double-precision case, respectively*.
+
+Speedups reach values between ~15x and ~25x for single-precision and ~13x to ~20x for double-precision at larger sizes in these tests. The rate of increase in speedup tends to slow down at the largest matrix sizes. Different block sizes yield slightly different speedup curves, but the overall trend is consistent. The plateau effect suggests that for very large problems, secondary bottlenecks (like memory bandwidth saturation or kernel launch overheads becoming proportionally larger) start limiting further gains; this is definitely due to my suboptimal implementation - I'm thinking there may be some global memory coalescing going on along with potential shared memory bank conflicts. This is because the threads (within a warp) within the loops for loading data and computing access different locations within the same memory bank simultaneously, and if multiple accesses are made, they turn serial.
+
+### CPU and GPU Computation Time vs. Matrix Size (Averaging)
+
+<p float="left">
+  <img src="figs/avg-times-vs-size.png" width="49%" />
+  <img src="double/figs/avg-times-vs-size.png" width="49%" />
+</p>
+
+*The left and right images are for the single- and double-precision case, respectively*.
+
+The gap between CPU and GPU times is even more pronounced here than for propagation, especially at larger sizes. The GPU averaging kernel uses an efficient parallel reduction within shared memory.
+
+### Computational Speedup vs. Matrix Size (Averaging)
+
+<p float="left">
+  <img src="figs/avg-speedup-vs-size.png" width="49%" />
+  <img src="double/figs/avg-speedup-vs-size.png" width="49%" />
+</p>
+
+*The left and right images are for the single- and double-precision case, respectively*.
+
+Speedup for averaging increases dramatically with matrix size, reaching higher peak values (~40x to ~65x for single-precision, ~30x to ~35x for double-precision) than the propagation step in these tests.
+
+### Maximum Differences between CPU and GPU vs. Matrix Size
+
+<p float="left">
+  <img src="figs/maxdiff-vs-size.png" width="49%" />
+  <img src="double/figs/maxdiff-vs-size.png" width="49%" />
+</p>
+
+*The left and right images are for the single- and double-precision case, respectively*.
+
+The maximum difference between the final CPU and GPU matrices and the row averages remains small but non-zero across all matrix sizes. Differences in the single-precision case (~$10^{-5}$ to ~$10^{-6}$) are significantly larger than in the double-precision case (~$10^{-14}$ to ~$10^{-15}$). The maximum difference appears relatively stable or slightly increases with matrix size and block size doesn't appear to have a consistent, major impact on the maximum difference.
